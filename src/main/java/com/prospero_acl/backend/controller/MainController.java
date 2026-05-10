@@ -1,15 +1,16 @@
 package com.prospero_acl.backend.controller;
 
-import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-@Controller
+@RestController
 @RequestMapping("/api/v1")
 public class MainController {
 
-  @RequestMapping("/")
-  public String index() {
-    return "index";
+  @GetMapping("/test")
+  public String getHello() {
+    return "Hello World";
   }
 
 }
