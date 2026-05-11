@@ -9,6 +9,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -17,6 +18,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import com.prospero_acl.backend.service.JwtService;
 
 import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
 @Configuration
@@ -32,12 +34,24 @@ public class Security {
   public SecurityFilterChain defaultSilterChain(HttpSecurity http) throws Exception {
     return http
         .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-        .csrf(csrf -> csrf.disable()) // For production
-        .authorizeHttpRequests(auth -> auth
+        .csrf(csrf -> csrf.disable())// For production
+        .authorizeHttpRequests(req -> req
+            // exept register that is un protected
+            .requestMatchers("/oauth2/**", "/login/**").permitAll()
             .anyRequest().authenticated())
-        .oauth2Login(oath2 -> oath2
-            .successHandler(oAuth2SuccessHandler()))
+
+        .exceptionHandling(ex -> ex
+            .authenticationEntryPoint(
+                (request, response, authException) -> {
+                  response.sendError(
+                      HttpServletResponse.SC_UNAUTHORIZED);
+                }))
+
+        .oauth2Login(oauth2 -> oauth2
+            .successHandler(oAuth2SuccessHandler())
+            .failureHandler(authenticationFailureHandler()))
         .build();
+
   }
 
   @Bean
@@ -55,6 +69,13 @@ public class Security {
       response.addCookie(cookie);
       // Redirect to frontend with token
       response.sendRedirect(frontendUrl + "/oauth-callback?token=" + token);
+    };
+  }
+
+  @Bean
+  public AuthenticationFailureHandler authenticationFailureHandler() {
+    return (request, response, exception) -> {
+      response.sendRedirect(frontendUrl + "/?error=oauth_failed");
     };
   }
 

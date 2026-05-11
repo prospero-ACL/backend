@@ -21,6 +21,7 @@ public class AuthController {
     String name = authentication.getName();
     String email = authentication.getPrincipal().toString();
     UserDTO user = new UserDTO(email, name);
+
     return ResponseEntity.ok(user);
   }
 
