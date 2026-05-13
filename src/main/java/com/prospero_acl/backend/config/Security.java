@@ -25,7 +25,7 @@ import lombok.RequiredArgsConstructor;
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class Security {
-  @Value("http://localhost:5173")
+  @Value("${frontend.url}")
   private String frontendUrl;
 
   private final JwtService jwtService;
@@ -37,9 +37,11 @@ public class Security {
         .csrf(csrf -> csrf.disable())// For production
         .authorizeHttpRequests(req -> req
             // exept register that is un protected
-            .requestMatchers("/oauth2/**", "/login/**").permitAll()
+            .requestMatchers("/oauth2/**").permitAll()
             .anyRequest().authenticated())
 
+        // by default it sends a 302 if not authenticated
+        // we force it to send a 401
         .exceptionHandling(ex -> ex
             .authenticationEntryPoint(
                 (request, response, authException) -> {
