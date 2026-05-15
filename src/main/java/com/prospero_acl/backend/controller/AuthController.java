@@ -18,20 +18,26 @@ public class AuthController {
 
   @GetMapping("/me")
   public ResponseEntity<UserDTO> getUserMe(Authentication authentication) {
-    String name = authentication.getName();
-    String email = authentication.getPrincipal().toString();
-    UserDTO user = new UserDTO(email, name);
 
-    return ResponseEntity.ok(user);
+    if (authentication == null) {
+      return ResponseEntity.status(401).build();
+    }
+
+    String email = authentication.getName();
+
+    return ResponseEntity.ok(
+        new UserDTO(
+            email,
+            "Check"));
   }
 
   @PostMapping("/logout")
-  public ResponseEntity<Void> logout(HttpServletResponse response) {
+  public ResponseEntity<Void> logout(HttpServletResponse response, Authentication authentication) {
+
+    authentication = null;
 
     Cookie cookie = new Cookie("access_token", "");
-
     cookie.setHttpOnly(true);
-    cookie.setSecure(false);
     cookie.setPath("/");
     cookie.setMaxAge(0);
 
