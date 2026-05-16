@@ -2,15 +2,18 @@ package com.prospero_acl.backend.config;
 
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -25,8 +28,11 @@ import lombok.RequiredArgsConstructor;
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class Security {
-  @Value("http://localhost:5173")
+  @Value("${app.frontend-url}")
   private String frontendUrl;
+
+  @Autowired
+  private JwtAuthFilter jwtAuthFilter;
 
   private final JwtService jwtService;
 
@@ -37,15 +43,17 @@ public class Security {
         .csrf(csrf -> csrf.disable())// For production
         .authorizeHttpRequests(req -> req
             // exept register that is un protected
-            .requestMatchers("/oauth2/**", "/login/**").permitAll()
+            .requestMatchers("/oauth2/**").permitAll()
             .anyRequest().authenticated())
 
         .exceptionHandling(ex -> ex
-            .authenticationEntryPoint(
-                (request, response, authException) -> {
-                  response.sendError(
-                      HttpServletResponse.SC_UNAUTHORIZED);
-                }))
+            .authenticationEntryPoint((request, response, authException) -> {
+              response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            }))
+
+        .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
+        .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
 
         .oauth2Login(oauth2 -> oauth2
             .successHandler(oAuth2SuccessHandler())
@@ -58,8 +66,11 @@ public class Security {
   public AuthenticationSuccessHandler oAuth2SuccessHandler() {
     return (request, response, authentication) -> {
       OAuth2User oauth2User = (OAuth2User) authentication.getPrincipal();
+
+      oauth2User.getAttributes().forEach((key, value) -> System.out.println(key + ": " + value));
       // Create JWT or session token
       String token = jwtService.generateToken(oauth2User);
+      System.out.println("jwt created");
       Cookie cookie = new Cookie("access_token", token);
       cookie.setHttpOnly(true);
       cookie.setSecure(false);
@@ -68,13 +79,14 @@ public class Security {
 
       response.addCookie(cookie);
       // Redirect to frontend with token
-      response.sendRedirect(frontendUrl + "/oauth-callback?token=" + token);
+      response.sendRedirect(frontendUrl);
     };
   }
 
   @Bean
   public AuthenticationFailureHandler authenticationFailureHandler() {
     return (request, response, exception) -> {
+      System.out.println("authentication has failed, redirecting...");
       response.sendRedirect(frontendUrl + "/?error=oauth_failed");
     };
   }
