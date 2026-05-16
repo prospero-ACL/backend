@@ -21,10 +21,14 @@ public class JwtService {
   public String generateToken(OAuth2User user) {
 
     SecretKey key = Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
-    String email = user.getAttribute("email");
+    String subject = user.getAttribute("email");
+
+    if (subject == null) {
+      subject = user.getAttribute("name");
+    }
 
     return Jwts.builder()
-        .subject(email)
+        .subject(subject)
         .issuedAt(new Date())
         .expiration(
             new Date(System.currentTimeMillis() + 1000 * 60 * 60))

@@ -21,6 +21,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import com.prospero_acl.backend.service.JwtService;
 
 import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
 @Configuration
@@ -45,6 +46,11 @@ public class Security {
             .requestMatchers("/oauth2/**").permitAll()
             .anyRequest().authenticated())
 
+        .exceptionHandling(ex -> ex
+            .authenticationEntryPoint((request, response, authException) -> {
+              response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            }))
+
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
         .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
@@ -64,6 +70,7 @@ public class Security {
       oauth2User.getAttributes().forEach((key, value) -> System.out.println(key + ": " + value));
       // Create JWT or session token
       String token = jwtService.generateToken(oauth2User);
+      System.out.println("jwt created");
       Cookie cookie = new Cookie("access_token", token);
       cookie.setHttpOnly(true);
       cookie.setSecure(false);
@@ -79,6 +86,7 @@ public class Security {
   @Bean
   public AuthenticationFailureHandler authenticationFailureHandler() {
     return (request, response, exception) -> {
+      System.out.println("authentication has failed, redirecting...");
       response.sendRedirect(frontendUrl + "/?error=oauth_failed");
     };
   }
