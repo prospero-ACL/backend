@@ -9,7 +9,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.prospero_acl.backend.model.dto.UserDTO;
+import com.prospero_acl.backend.model.dto.ExtractedUserDTO;
+import com.prospero_acl.backend.model.dto.ResponseUserDTO;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
@@ -19,7 +20,7 @@ import jakarta.servlet.http.HttpServletResponse;
 public class AuthController {
 
   @GetMapping("/me")
-  public ResponseEntity<UserDTO> getUserMe(Authentication authentication) {
+  public ResponseEntity<ResponseUserDTO> getUserMe(Authentication authentication) {
     if (authentication == null ||
         !authentication.isAuthenticated() ||
         authentication instanceof AnonymousAuthenticationToken) {
@@ -43,7 +44,7 @@ public class AuthController {
     name = (name != null) ? name : "Empty is name";
 
     System.out.println("returning user:\n" + email + "\n" + name);
-    return ResponseEntity.ok(new UserDTO(email, name));
+    return ResponseEntity.ok(new ResponseUserDTO(email, name));
   }
 
   @PostMapping("/logout")
