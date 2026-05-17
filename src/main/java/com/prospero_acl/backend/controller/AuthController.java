@@ -1,5 +1,8 @@
 package com.prospero_acl.backend.controller;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -11,6 +14,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.prospero_acl.backend.model.dto.ExtractedUserDTO;
 import com.prospero_acl.backend.model.dto.ResponseUserDTO;
+import com.prospero_acl.backend.repo.UserRepo;
+import com.prospero_acl.backend.service.UserService;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
@@ -19,32 +24,13 @@ import jakarta.servlet.http.HttpServletResponse;
 @RequestMapping("/api/v1")
 public class AuthController {
 
+  @Autowired
+  private UserService userService;
+
   @GetMapping("/me")
-  public ResponseEntity<ResponseUserDTO> getUserMe(Authentication authentication) {
-    if (authentication == null ||
-        !authentication.isAuthenticated() ||
-        authentication instanceof AnonymousAuthenticationToken) {
-      System.out.println("No authentication");
-      return ResponseEntity.status(401).build();
-    }
+  public ResponseEntity<ResponseUserDTO> getUserMe() {
 
-    Object principal = authentication.getPrincipal();
-    String email = null;
-    String name = null;
-
-    // if (principal instanceof OAuth2User oauth2User) {
-    // // Active OAuth2 login session
-    // email = oauth2User.getAttribute("email");
-    // name = oauth2User.getAttribute("name");
-    // } else {
-    // return ResponseEntity.status(401).build();
-    // }
-    //
-    email = (email != null) ? email : "Empty is email";
-    name = (name != null) ? name : "Empty is name";
-
-    System.out.println("returning user:\n" + email + "\n" + name);
-    return ResponseEntity.ok(new ResponseUserDTO(email, name));
+    return ResponseEntity.ok(new ResponseUserDTO("ds", "ds", "dfsd", "dfsdf", "adsad"));
   }
 
   @PostMapping("/logout")
