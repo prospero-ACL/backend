@@ -3,9 +3,11 @@ package com.prospero_acl.backend.service;
 import java.util.Map;
 
 import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.stereotype.Service;
 
 import com.prospero_acl.backend.model.dto.ExtractedUserDTO;
 
+@Service
 public class ExtractedUserInfoFactory {
 
   public ExtractedUserDTO create(String registrationId, OAuth2User oAuth2User) {

@@ -1,7 +1,5 @@
 package com.prospero_acl.backend.service;
 
-import java.util.Optional;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -14,7 +12,7 @@ public class UserService {
   @Autowired
   private UserRepo userRepo;
 
-  public Optional<User> getUser(String providerId) {
+  public User findByProviderId(String providerId) {
     return userRepo.findByProviderId(providerId);
   }
 
