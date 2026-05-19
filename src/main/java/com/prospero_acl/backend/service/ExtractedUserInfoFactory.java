@@ -22,7 +22,7 @@ public class ExtractedUserInfoFactory {
   private ExtractedUserDTO extractGithub(OAuth2User oAuth2User) {
     Map<String, Object> attrs = oAuth2User.getAttributes();
     String id = String.valueOf(attrs.get("id"));
-    String email = (String) attrs.get("email"); // null when user set email to private
+    String email = (String) attrs.getOrDefault("email", "Unknown"); // null when user set email to private
     String name = (String) attrs.getOrDefault("name",
         attrs.getOrDefault("login", "Unknown")); // name can be null, login never is
 

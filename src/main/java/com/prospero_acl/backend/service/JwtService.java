@@ -6,8 +6,9 @@ import java.util.Date;
 import javax.crypto.SecretKey;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
+
+import com.prospero_acl.backend.model.dto.ExtractedUserDTO;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -18,14 +19,10 @@ public class JwtService {
   @Value("${jwt.secret}")
   private String SECRET;
 
-  public String generateToken(OAuth2User user) {
+  public String generateToken(ExtractedUserDTO user) {
 
     SecretKey key = Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
-    String subject = user.getAttribute("email");
-
-    if (subject == null) {
-      subject = user.getAttribute("name");
-    }
+    String subject = user.providerId();
 
     return Jwts.builder()
         .subject(subject)
