@@ -42,10 +42,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
           if (jwtService.isValid(token)) {
 
-            String email = jwtService.extractEmail(token);
+            String providerId = jwtService.extractProviderId(token);
 
             Authentication auth = new UsernamePasswordAuthenticationToken(
-                email,
+                providerId,
                 null,
                 List.of());
 
