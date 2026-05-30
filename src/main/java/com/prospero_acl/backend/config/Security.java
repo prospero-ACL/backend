@@ -39,6 +39,7 @@ public class Security {
   @Autowired
   private JwtAuthFilter jwtAuthFilter;
 
+  @Autowired
   private final JwtService jwtService;
 
   @Autowired
@@ -76,16 +77,16 @@ public class Security {
   public AuthenticationSuccessHandler oAuth2SuccessHandler() {
     return (request, response, authentication) -> {
 
-      OAuth2AuthenticationToken token1 = (OAuth2AuthenticationToken) authentication;
-      String registrationId = token1.getAuthorizedClientRegistrationId();
-      OAuth2User oAuth2User = token1.getPrincipal();
+      System.out.println("in success handler....");
+      OAuth2AuthenticationToken authToken = (OAuth2AuthenticationToken) authentication;
+      String registrationId = authToken.getAuthorizedClientRegistrationId();
+      OAuth2User oAuth2User = authToken.getPrincipal();
+      System.out.println(authToken);
       ExtractedUserDTO exUser = extractedUserInfoFactory.create(registrationId, oAuth2User);
 
-      User user = userService.findByProviderId(exUser.providerId());
-
-      if (user == null) {
-        userService.createUser(exUser);
-      }
+      System.out.println("fsdfdsf" + exUser);
+      User user = userService.findOrCreateUser(exUser);
+      System.out.println("This it the user: " + user);
 
       // Create JWT or session token
       String token = jwtService.generateToken(exUser);

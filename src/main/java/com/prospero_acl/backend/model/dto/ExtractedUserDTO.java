@@ -4,6 +4,7 @@ import jakarta.annotation.Nullable;
 
 public record ExtractedUserDTO(
     String providerId,
+    String provider,
     String email,
     String name,
     @Nullable String avatarUrl) {
