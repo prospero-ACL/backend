@@ -55,8 +55,9 @@ public class Security {
         .csrf(csrf -> csrf.disable())// For production
         .authorizeHttpRequests(req -> req
             // exept register that is un protected
-            .requestMatchers("/oauth2/**").permitAll()
-            .anyRequest().authenticated())
+            // .requestMatchers("/oauth2/**").permitAll()
+            // .anyRequest().authenticated())
+            .anyRequest().permitAll())
 
         .exceptionHandling(ex -> ex
             .authenticationEntryPoint((request, response, authException) -> {
