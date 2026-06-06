@@ -1,5 +1,7 @@
 package com.prospero_acl.backend.model.dto;
 
 public record RequestDocumentUploadDTO(
-    String text) {
+    String name,
+    String text,
+    String userId) {
 }
