@@ -57,6 +57,7 @@ public class Security {
             // exept register that is un protected
             .requestMatchers("/oauth2/**").permitAll()
             .anyRequest().authenticated())
+        // .anyRequest().permitAll())
 
         .exceptionHandling(ex -> ex
             .authenticationEntryPoint((request, response, authException) -> {
