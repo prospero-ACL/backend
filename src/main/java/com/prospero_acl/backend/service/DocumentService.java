@@ -45,7 +45,7 @@ public class DocumentService {
         .filterExpression("owner == '" + userId + "'")
         .build();
 
-    return vectorStore.similaritySearch(request)
+    List<ResponseDocumentDto> searchResult = vectorStore.similaritySearch(request)
         .stream()
         .collect(Collectors.toMap(
             doc -> (String) doc.getMetadata().get("filename"),
@@ -58,6 +58,7 @@ public class DocumentService {
             (String) doc.getMetadata().get("filename"),
             new Date((Long) doc.getMetadata().get("uploadedAt")).toString()))
         .toList();
-  }
 
+    return searchResult;
+  }
 }

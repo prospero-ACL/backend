@@ -1,6 +1,8 @@
 package com.prospero_acl.backend.model;
 
 import java.time.Instant;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
@@ -8,12 +10,15 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
-@Entity(name = "users")
+@Entity
+@Table(name = "users")
 @AllArgsConstructor
 @NoArgsConstructor
 public class User {
@@ -45,4 +50,8 @@ public class User {
 
   @Column(nullable = false, updatable = true)
   private Instant updatedAt = Instant.now();
+
+  // NTS: mappeBy points to @JoinColumn having field
+  @OneToMany(mappedBy = "owner", orphanRemoval = true)
+  Set<Report> reports = new HashSet<>();
 }
