@@ -1,6 +1,8 @@
 package com.prospero_acl.backend.model;
 
-import java.util.UUID;
+import java.time.Instant;
+
+import org.hibernate.annotations.CreationTimestamp;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -17,22 +19,23 @@ import lombok.NoArgsConstructor;
 
 @Data
 @Entity
-@Table(name = "report_chunks")
-@AllArgsConstructor
+@Table(name = "user_prompts")
 @NoArgsConstructor
-public class ReportChunk {
-  // this acts as a join table in
-  @Id
-  @GeneratedValue(strategy = GenerationType.UUID)
-  private UUID id;
+@AllArgsConstructor
+public class UserPrompt {
 
-  // FK into the reports table
-  @ManyToOne(fetch = FetchType.LAZY)
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Integer id;
+
+  @ManyToOne(fetch = FetchType.EAGER)
   @JoinColumn(name = "report_id", nullable = false)
   private Report report;
 
-  // Just a UUID — Hibernate does NOT manage a FK into vector_store
-  // the problem is that the pgvector_store is not a JPA entity
-  @Column(name = "chunk_id", nullable = false)
-  private UUID chunkId;
+  @Column(nullable = false, columnDefinition = "TEXT")
+  private String text;
+
+  @CreationTimestamp
+  @Column(nullable = false, updatable = false)
+  private Instant createdAt;
 }

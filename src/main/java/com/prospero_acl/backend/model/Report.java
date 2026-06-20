@@ -1,11 +1,14 @@
 package com.prospero_acl.backend.model;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import com.prospero_acl.backend.model.enums.ReportStatus;
 
@@ -38,21 +41,21 @@ public class Report {
   @JoinColumn(name = "owner_id", nullable = false) // NTS:Name of the FK column name
   private User owner;
 
-  @Column(nullable = false)
-  private int promptCount = 0; // Max 3, change possible...
+  @OneToMany(mappedBy = "report", orphanRemoval = true, cascade = CascadeType.ALL)
+  private List<UserPrompt> prompts = new ArrayList<>();
 
   @Column(nullable = false)
   @Enumerated(EnumType.STRING)
   private ReportStatus status = ReportStatus.DRAFT;
 
-  @OneToMany(mappedBy = "report_id", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+  @OneToMany(mappedBy = "report", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
   private Set<ReportChunk> chunks = new HashSet<>();
 
   @CreationTimestamp
   @Column(nullable = false, updatable = false)
   private Instant createdAt;
 
-  @CreationTimestamp
+  @UpdateTimestamp
   @Column(nullable = false, updatable = true)
   private Instant updatedAt;
 }

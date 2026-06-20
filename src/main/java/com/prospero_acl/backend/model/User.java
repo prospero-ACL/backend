@@ -5,6 +5,9 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -45,11 +48,13 @@ public class User {
   @Column
   private String theme = "auto";
 
+  @CreationTimestamp
   @Column(nullable = false, updatable = false)
-  private Instant createdAt = Instant.now();
+  private Instant createdAt;
 
+  @UpdateTimestamp
   @Column(nullable = false, updatable = true)
-  private Instant updatedAt = Instant.now();
+  private Instant updatedAt;
 
   // NTS: mappeBy points to @JoinColumn having field
   @OneToMany(mappedBy = "owner", orphanRemoval = true)
