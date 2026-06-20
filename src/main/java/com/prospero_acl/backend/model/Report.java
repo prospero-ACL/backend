@@ -24,6 +24,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -42,7 +43,12 @@ public class Report {
   private User owner;
 
   @OneToMany(mappedBy = "report", orphanRemoval = true, cascade = CascadeType.ALL)
+  @OrderBy("position ASC")
   private List<UserPrompt> prompts = new ArrayList<>();
+
+  @OneToMany(mappedBy = "report", orphanRemoval = true, cascade = CascadeType.ALL)
+  @OrderBy("position ASC")
+  private List<LlmReply> replies = new ArrayList<>();
 
   @Column(nullable = false)
   @Enumerated(EnumType.STRING)

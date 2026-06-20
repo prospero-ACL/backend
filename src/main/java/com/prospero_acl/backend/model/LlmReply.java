@@ -20,10 +20,10 @@ import lombok.NoArgsConstructor;
 
 @Data
 @Entity
-@Table(name = "user_prompt")
+@Table(name = "llm_reply")
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserPrompt {
+public class LlmReply {
 
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
@@ -42,4 +42,6 @@ public class UserPrompt {
   @CreationTimestamp
   @Column(nullable = false, updatable = false)
   private Instant createdAt;
+
+  // Possibly add more fields here
 }

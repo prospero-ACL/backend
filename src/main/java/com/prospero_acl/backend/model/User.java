@@ -8,8 +8,12 @@ import java.util.UUID;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import com.prospero_acl.backend.model.enums.SecurityLevel;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -47,6 +51,10 @@ public class User {
 
   @Column
   private String theme = "auto";
+
+  @Column(nullable = false)
+  @Enumerated(EnumType.STRING)
+  private SecurityLevel securityLevel = SecurityLevel.LOW;
 
   @CreationTimestamp
   @Column(nullable = false, updatable = false)
