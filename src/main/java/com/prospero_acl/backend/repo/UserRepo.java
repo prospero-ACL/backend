@@ -11,4 +11,6 @@ import com.prospero_acl.backend.model.User;
 @Repository
 public interface UserRepo extends JpaRepository<User, UUID> {
   Optional<User> findByProviderId(String providerId);
+
+  Object findByProviderNamespacedId(String principalId);
 }

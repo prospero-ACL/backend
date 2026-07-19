@@ -2,8 +2,7 @@ package com.prospero_acl.backend.model.dto;
 
 import java.util.UUID;
 
-public record ReportResponseDTO(
-    UUID id,
-    String reply) {
-
+public record ReportCreateDTO(
+    String prompt,
+    UUID[] chunks) {
 }

@@ -11,17 +11,21 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.prospero_acl.backend.model.dto.ReportCreateDTO;
 import com.prospero_acl.backend.model.dto.ReportResponseDTO;
 import com.prospero_acl.backend.model.dto.RequestDocumentUploadDTO;
-import com.prospero_acl.backend.model.dto.ResponseDocumentDto;
+import com.prospero_acl.backend.model.dto.ResponseDocumentDTO;
 import com.prospero_acl.backend.service.DocumentService;
+import com.prospero_acl.backend.service.ReportService;
 
 @RestController
 @RequestMapping("/api/v1")
 public class MainController {
 
   @Autowired
-  DocumentService documentService;
+  private DocumentService documentService;
+  @Autowired
+  private ReportService reportService;
 
   @GetMapping("/test")
   public String getHello() {
@@ -29,30 +33,28 @@ public class MainController {
   }
 
   @GetMapping("/documents/{userId}")
-  public ResponseEntity<List<ResponseDocumentDto>> getUserDocs(@PathVariable String userId) {
+  public ResponseEntity<List<ResponseDocumentDTO>> getUserDocs(@PathVariable String userId) {
     // quick guard
     if (!userId.matches("^[a-zA-Z0-9_-]{1,64}$")) {
       throw new IllegalArgumentException("Invalid userId");
     }
-    List<ResponseDocumentDto> responseDocumentDto = documentService.getDocumentsByUser(userId);
-    return ResponseEntity.ok(responseDocumentDto);
+    List<ResponseDocumentDTO> responseDocumentDTO = documentService.getDocumentsByUser(userId);
+    return ResponseEntity.ok(responseDocumentDTO);
   }
 
   @PostMapping("/documents")
   public void storeDocument(@RequestBody RequestDocumentUploadDTO req) {
-
     String text = req.text();
     String fileName = req.name();
     String userId = req.userId();
-
     documentService.saveDocument(fileName, text, userId);
-
   }
 
   @PostMapping("/conversations/create")
-  public ReportResponseDTO createNewReport() {
+  public ResponseEntity<ReportResponseDTO> createNewReport(@RequestBody ReportCreateDTO reportCreateOptions) {
 
-    return new ReportResponseDTO();
+    ReportResponseDTO reportResponseDTO = reportService.createReport(reportCreateOptions);
+    return ResponseEntity.ok(reportResponseDTO);
   }
 
 }

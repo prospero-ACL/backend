@@ -3,7 +3,7 @@ package com.prospero_acl.backend.service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.prospero_acl.backend.model.dto.ResponseDocumentDto;
+import com.prospero_acl.backend.model.dto.ResponseDocumentDTO;
 
 import java.util.Date;
 import java.util.List;
@@ -38,14 +38,14 @@ public class DocumentService {
     vectorStore.add(documents);
   }
 
-  public List<ResponseDocumentDto> getDocumentsByUser(String userId) {
+  public List<ResponseDocumentDTO> getDocumentsByUser(String userId) {
     SearchRequest request = SearchRequest.builder()
         .query(" ")
         .topK(1000)
         .filterExpression("owner == '" + userId + "'")
         .build();
 
-    List<ResponseDocumentDto> searchResult = vectorStore.similaritySearch(request)
+    List<ResponseDocumentDTO> searchResult = vectorStore.similaritySearch(request)
         .stream()
         .collect(Collectors.toMap(
             doc -> (String) doc.getMetadata().get("filename"),
@@ -54,7 +54,7 @@ public class DocumentService {
         ))
         .values()
         .stream()
-        .map(doc -> new ResponseDocumentDto(
+        .map(doc -> new ResponseDocumentDTO(
             (String) doc.getMetadata().get("filename"),
             new Date((Long) doc.getMetadata().get("uploadedAt")).toString()))
         .toList();
