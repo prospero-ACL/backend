@@ -2,24 +2,27 @@ package com.prospero_acl.backend.service;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
-import org.springframework.ai.chat.memory.ChatMemory;
-import org.springframework.ai.chat.memory.MessageWindowChatMemory;
+import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.vectorstore.filter.Filter;
 import org.springframework.stereotype.Service;
-
-import com.prospero_acl.backend.model.LlmReply;
 
 @Service
 public class RAGService {
 
-  private ChatClient chatClient;
-  private ChatMemory chatMemory = MessageWindowChatMemory.builder().build();
+  private final ChatClient chatClient;
+  private final VectorStore vectorStore;
+
+  public RAGService(ChatClient.Builder builder, VectorStore vectorStore) {
+    this.chatClient = builder.build();
+    this.vectorStore = vectorStore;
+  }
 
   public String query(String text, Filter.Expression filter) {
-
-    String chatResponse = chatClient
+    return chatClient
         .prompt(text)
-        // in the advisor we embed the knoledge source ie the vector store
-        .advisors(QuestionAnswerAdvisor.builder(vectorStore).build())
+        .advisors(a -> a
+            .param(QuestionAnswerAdvisor.FILTER_EXPRESSION, filter)
+            .advisors(QuestionAnswerAdvisor.builder(vectorStore).build()))
         .call()
         .content();
   }

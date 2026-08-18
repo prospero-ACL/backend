@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -51,9 +52,11 @@ public class MainController {
   }
 
   @PostMapping("/conversations/create")
-  public ResponseEntity<ReportResponseDTO> createNewReport(@RequestBody ReportCreateDTO reportCreateOptions) {
+  public ResponseEntity<ReportResponseDTO> createNewReport(
+      @RequestBody ReportCreateDTO reportCreateOptions,
+      Authentication authentication) {
 
-    ReportResponseDTO reportResponseDTO = reportService.createReport(reportCreateOptions);
+    ReportResponseDTO reportResponseDTO = reportService.createReport(authentication.getName(), reportCreateOptions);
     return ResponseEntity.ok(reportResponseDTO);
   }
 

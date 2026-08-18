@@ -3,10 +3,8 @@ package com.prospero_acl.backend.service;
 import java.util.List;
 import java.util.UUID;
 
-import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.memory.ChatMemory;
-import org.springframework.ai.chat.memory.MessageWindowChatMemory;
-import org.springframework.ai.vectorstore.VectorStore;
+import jakarta.persistence.EntityNotFoundException;
+
 import org.springframework.ai.vectorstore.filter.Filter;
 import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,7 +38,7 @@ public class ReportService {
   private LlmReplyRepo replyRepo;
 
   public ReportResponseDTO createReport(String principalId, ReportCreateDTO req) {
-    User user = userRepo.findByProviderNamespacedId(principalId)
+    User user = userRepo.findByProviderId(principalId)
         .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
     Report report = new Report();
@@ -56,7 +54,7 @@ public class ReportService {
 
     // ACL filter
     List<String> allowedTiers = resolveAllowedTiers(user.getSecurityLevel());
-    Filter.Expression filter = buildFilterExpression(allowedTiers, req.getScope(), user.getId());
+    Filter.Expression filter = buildFilterExpression(allowedTiers, req.scope(), user.getId());
 
     // RAG call
     String reply = ragService.query(req.prompt(), filter);
@@ -79,15 +77,15 @@ public class ReportService {
     FilterExpressionBuilder b = new FilterExpressionBuilder();
 
     // privacy IN ["public", "restricted", ...]
-    Filter.Expression tierFilter = b.in("privacy", allowedTiers.toArray()).build();
+    FilterExpressionBuilder.Op tierFilter = b.in("privacy", allowedTiers.toArray());
 
     if (scope == DocumentScope.RESTRICTED) {
       // AND owner == "userId-string"
-      Filter.Expression ownerFilter = b.eq("owner", userId.toString()).build();
+      FilterExpressionBuilder.Op ownerFilter = b.eq("owner", userId.toString());
       return b.and(tierFilter, ownerFilter).build();
     }
 
-    return tierFilter;
+    return tierFilter.build();
   }
 
   private List<String> resolveAllowedTiers(SecurityLevel level) {
