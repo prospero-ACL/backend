@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -13,7 +14,9 @@ import com.prospero_acl.backend.model.dto.ResponseUserDTO;
 import com.prospero_acl.backend.service.UserService;
 
 import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -38,11 +41,17 @@ public class AuthController {
   }
 
   @PostMapping("/logout")
-  public ResponseEntity<Void> logout(HttpServletResponse response, Authentication authentication) {
-    authentication = null;
+  public ResponseEntity<Void> logout(HttpServletRequest request, HttpServletResponse response) {
+    SecurityContextHolder.clearContext();
+
+    HttpSession session = request.getSession(false);
+    if (session != null) {
+      session.invalidate();
+    }
 
     Cookie cookie = new Cookie("access_token", "");
     cookie.setHttpOnly(true);
+    cookie.setSecure(false);
     cookie.setPath("/");
     cookie.setMaxAge(0);
 

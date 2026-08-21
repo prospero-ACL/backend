@@ -84,6 +84,22 @@ server-side sessions (`SessionCreationPolicy.STATELESS`). Instead:
 CORS is locked to the single origin `app.frontend-url` (`http://localhost:5173` by default) with
 credentials enabled, so the frontend must send cookies with requests, not bearer headers.
 
+**Lazy-collection gotcha**: `User.reports` is `@OneToMany(mappedBy = "owner")` (lazy by JPA default).
+`User` is annotated `@Data`, but `reports` carries `@ToString.Exclude`/`@EqualsAndHashCode.Exclude` —
+**do not remove those** or reintroduce logging/string-concatenation of a whole `User` entity. Nothing
+on the auth path is `@Transactional`, so a `User` loaded via `UserRepo.findByProviderId(...)` is
+detached by the time `oAuth2SuccessHandler` runs; touching `reports` on it (e.g. via the default
+Lombok `toString()`) throws `LazyInitializationException` — this previously crashed every
+*second* login for an existing user (a fresh `User` has a real in-memory `HashSet` for `reports`, so
+first-time registration never hit it).
+
+**Logout** (`AuthController.logout`) clears `SecurityContextHolder`, invalidates any `HttpSession`
+left over from the OAuth2 handshake (see the STATELESS note above — that session isn't cleaned up
+automatically), and overwrites the `access_token` cookie with `Max-Age=0` using attributes that match
+the login cookie exactly (httpOnly, `secure(false)`, `path("/")`) so the browser actually drops it. By
+design there is no server-side token revocation/blocklist: a captured token remains cryptographically
+valid until its natural 1-hour expiry even after logout — only the browser stops sending it.
+
 ### RAG + ACL pipeline
 
 There are two separate storage layers that don't share a foreign-key relationship:

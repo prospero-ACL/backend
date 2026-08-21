@@ -21,7 +21,9 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Data
 @Entity
@@ -66,5 +68,7 @@ public class User {
 
   // NTS: mappeBy points to @JoinColumn having field
   @OneToMany(mappedBy = "owner", orphanRemoval = true)
+  @ToString.Exclude
+  @EqualsAndHashCode.Exclude
   Set<Report> reports = new HashSet<>();
 }

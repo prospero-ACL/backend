@@ -19,7 +19,6 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import com.prospero_acl.backend.model.User;
 import com.prospero_acl.backend.model.dto.ExtractedUserDTO;
 import com.prospero_acl.backend.service.ExtractedUserInfoFactory;
 import com.prospero_acl.backend.service.JwtService;
@@ -78,20 +77,15 @@ public class Security {
   public AuthenticationSuccessHandler oAuth2SuccessHandler() {
     return (request, response, authentication) -> {
 
-      System.out.println("in success handler....");
       OAuth2AuthenticationToken authToken = (OAuth2AuthenticationToken) authentication;
       String registrationId = authToken.getAuthorizedClientRegistrationId();
       OAuth2User oAuth2User = authToken.getPrincipal();
-      System.out.println(authToken);
       ExtractedUserDTO exUser = extractedUserInfoFactory.create(registrationId, oAuth2User);
 
-      System.out.println("fsdfdsf" + exUser);
-      User user = userService.findOrCreateUser(exUser);
-      System.out.println("This it the user: " + user);
+      userService.findOrCreateUser(exUser);
 
       // Create JWT or session token
       String token = jwtService.generateToken(exUser);
-      System.out.println("jwt created");
       Cookie cookie = new Cookie("access_token", token);
       cookie.setHttpOnly(true);
       cookie.setSecure(false);
@@ -107,7 +101,6 @@ public class Security {
   @Bean
   public AuthenticationFailureHandler authenticationFailureHandler() {
     return (request, response, exception) -> {
-      System.out.println("authentication has failed, redirecting...");
       response.sendRedirect(frontendUrl + "/?error=oauth_failed");
     };
   }
