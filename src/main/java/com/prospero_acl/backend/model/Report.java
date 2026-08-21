@@ -10,6 +10,7 @@ import java.util.UUID;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import com.prospero_acl.backend.model.enums.DocumentScope;
 import com.prospero_acl.backend.model.enums.ReportStatus;
 
 import jakarta.persistence.CascadeType;
@@ -53,6 +54,10 @@ public class Report {
   @Column(nullable = false)
   @Enumerated(EnumType.STRING)
   private ReportStatus status = ReportStatus.DRAFT;
+
+  @Column(nullable = false)
+  @Enumerated(EnumType.STRING)
+  private DocumentScope scope;
 
   @OneToMany(mappedBy = "report", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
   private Set<ReportChunk> chunks = new HashSet<>();

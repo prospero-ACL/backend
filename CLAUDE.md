@@ -112,6 +112,11 @@ Flow for asking a question (`ReportService.createReport`):
    scoped before the LLM ever sees a chunk.
 6. Persist the reply as an `LlmReply` at position 1 and return `ReportResponseDTO`.
 
+The total number of questions the user can ask is three. So the first question
+creates the report and the next two modify the output of the same report. When
+the no of questions exceeds three is marked as `ReportStatus.COMPLETED` so the
+frontend can disable the "Ask" button.
+
 `DocumentService.saveDocument` is the ingestion path: splits text with `TokenTextSplitter`
 (chunk size 500, min 50 chars) and writes to the vector store with owner/filename/uploadedAt
 metadata. `getDocumentsByUser` lists distinct filenames for a user by similarity-searching with an

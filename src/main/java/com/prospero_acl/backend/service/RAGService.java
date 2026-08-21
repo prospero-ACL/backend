@@ -1,9 +1,11 @@
 package com.prospero_acl.backend.service;
 
+import java.util.List;
+
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
+import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.vectorstore.VectorStore;
-import org.springframework.ai.vectorstore.filter.Filter;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -17,9 +19,11 @@ public class RAGService {
     this.vectorStore = vectorStore;
   }
 
-  public String query(String text, Filter.Expression filter) {
+  public String query(String text, List<Message> history, String filter) {
     return chatClient
-        .prompt(text)
+        .prompt()
+        .messages(history)
+        .user(text)
         .advisors(a -> a
             .param(QuestionAnswerAdvisor.FILTER_EXPRESSION, filter)
             .advisors(QuestionAnswerAdvisor.builder(vectorStore).build()))

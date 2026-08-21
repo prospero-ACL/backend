@@ -1,21 +1,28 @@
 package com.prospero_acl.backend.service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import jakarta.persistence.EntityNotFoundException;
 
-import org.springframework.ai.vectorstore.filter.Filter;
-import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
+import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import com.prospero_acl.backend.exception.ReportCompletedException;
 import com.prospero_acl.backend.model.LlmReply;
 import com.prospero_acl.backend.model.Report;
 import com.prospero_acl.backend.model.User;
 import com.prospero_acl.backend.model.UserPrompt;
+import com.prospero_acl.backend.model.dto.ReportContinueDTO;
 import com.prospero_acl.backend.model.dto.ReportCreateDTO;
 import com.prospero_acl.backend.model.dto.ReportResponseDTO;
+import com.prospero_acl.backend.model.dto.ReportTurnDTO;
 import com.prospero_acl.backend.model.enums.DocumentScope;
 import com.prospero_acl.backend.model.enums.ReportStatus;
 import com.prospero_acl.backend.model.enums.SecurityLevel;
@@ -25,6 +32,7 @@ import com.prospero_acl.backend.repo.UserPromptRepo;
 import com.prospero_acl.backend.repo.UserRepo;
 
 @Service
+@Transactional
 public class ReportService {
   @Autowired
   private UserRepo userRepo;
@@ -44,48 +52,139 @@ public class ReportService {
     Report report = new Report();
     report.setOwner(user);
     report.setStatus(ReportStatus.DRAFT);
+    report.setScope(req.scope());
     report = reportRepo.save(report);
+
+    int position = nextPosition(report);
 
     UserPrompt prompt = new UserPrompt();
     prompt.setReport(report);
     prompt.setText(req.prompt());
-    prompt.setPosition(1);
+    prompt.setPosition(position);
     userPromptRepo.save(prompt);
+    report.getPrompts().add(prompt);
 
-    // ACL filter
     List<String> allowedTiers = resolveAllowedTiers(user.getSecurityLevel());
-    Filter.Expression filter = buildFilterExpression(allowedTiers, req.scope(), user.getId());
+    String filter = buildFilterExpression(allowedTiers, report.getScope(), user.getId());
 
-    // RAG call
-    String reply = ragService.query(req.prompt(), filter);
+    String reply = ragService.query(req.prompt(), List.of(), filter);
 
-    // persist reply
     LlmReply replyEntity = new LlmReply();
     replyEntity.setReport(report);
     replyEntity.setText(reply);
-    replyEntity.setPosition(1);
+    replyEntity.setPosition(position);
     replyRepo.save(replyEntity);
+    report.getReplies().add(replyEntity);
 
-    return new ReportResponseDTO(report.getId(), reply);
+    report.setStatus(statusForPosition(position));
+    report = reportRepo.save(report);
+
+    return toResponseDTO(report);
   }
 
-  private Filter.Expression buildFilterExpression(
+  public ReportResponseDTO continueReport(String principalId, UUID reportId, ReportContinueDTO req) {
+    User user = userRepo.findByProviderId(principalId)
+        .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+    Report report = reportRepo.findByIdAndOwner_Id(reportId, user.getId())
+        .orElseThrow(() -> new EntityNotFoundException("Report not found"));
+
+    if (report.getStatus() == ReportStatus.COMPLETED) {
+      throw new ReportCompletedException("Report has reached its 3-question limit");
+    }
+
+    List<Message> history = buildHistory(report);
+    int position = nextPosition(report);
+
+    UserPrompt prompt = new UserPrompt();
+    prompt.setReport(report);
+    prompt.setText(req.prompt());
+    prompt.setPosition(position);
+    userPromptRepo.save(prompt);
+    report.getPrompts().add(prompt);
+
+    List<String> allowedTiers = resolveAllowedTiers(user.getSecurityLevel());
+    String filter = buildFilterExpression(allowedTiers, report.getScope(), user.getId());
+
+    String replyText = ragService.query(req.prompt(), history, filter);
+
+    LlmReply replyEntity = new LlmReply();
+    replyEntity.setReport(report);
+    replyEntity.setText(replyText);
+    replyEntity.setPosition(position);
+    replyRepo.save(replyEntity);
+    report.getReplies().add(replyEntity);
+
+    report.setStatus(statusForPosition(position));
+    report = reportRepo.save(report);
+
+    return toResponseDTO(report);
+  }
+
+  @Transactional(readOnly = true)
+  public ReportResponseDTO getReport(String principalId, UUID reportId) {
+    User user = userRepo.findByProviderId(principalId)
+        .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+    Report report = reportRepo.findByIdAndOwner_Id(reportId, user.getId())
+        .orElseThrow(() -> new EntityNotFoundException("Report not found"));
+
+    return toResponseDTO(report);
+  }
+
+  private int nextPosition(Report report) {
+    return report.getPrompts().size() + 1;
+  }
+
+  private ReportStatus statusForPosition(int position) {
+    return switch (position) {
+      case 1 -> ReportStatus.DRAFT;
+      case 2 -> ReportStatus.IN_PROGRESS;
+      default -> ReportStatus.COMPLETED;
+    };
+  }
+
+  private List<Message> buildHistory(Report report) {
+    List<Message> messages = new ArrayList<>();
+    List<UserPrompt> prompts = report.getPrompts();
+    List<LlmReply> replies = report.getReplies();
+    for (int i = 0; i < prompts.size(); i++) {
+      messages.add(new UserMessage(prompts.get(i).getText()));
+      messages.add(new AssistantMessage(replies.get(i).getText()));
+    }
+    return messages;
+  }
+
+  private ReportResponseDTO toResponseDTO(Report report) {
+    List<UserPrompt> prompts = report.getPrompts();
+    List<LlmReply> replies = report.getReplies();
+    List<ReportTurnDTO> turns = new ArrayList<>();
+    for (int i = 0; i < prompts.size(); i++) {
+      turns.add(new ReportTurnDTO(
+          prompts.get(i).getPosition(),
+          prompts.get(i).getText(),
+          replies.get(i).getText()));
+    }
+    return new ReportResponseDTO(report.getId(), report.getStatus(), turns);
+  }
+
+  private String buildFilterExpression(
       List<String> allowedTiers,
       DocumentScope scope,
       UUID userId) {
 
-    FilterExpressionBuilder b = new FilterExpressionBuilder();
-
-    // privacy IN ["public", "restricted", ...]
-    FilterExpressionBuilder.Op tierFilter = b.in("privacy", allowedTiers.toArray());
+    // QuestionAnswerAdvisor.FILTER_EXPRESSION is parsed as filter-expression DSL text
+    // (FilterExpressionTextParser), not built from a Filter.Expression object.
+    String tiers = allowedTiers.stream()
+        .map(tier -> "'" + tier + "'")
+        .collect(Collectors.joining(", "));
+    String filterExpression = "privacy in [" + tiers + "]";
 
     if (scope == DocumentScope.RESTRICTED) {
-      // AND owner == "userId-string"
-      FilterExpressionBuilder.Op ownerFilter = b.eq("owner", userId.toString());
-      return b.and(tierFilter, ownerFilter).build();
+      filterExpression += " && owner == '" + userId + "'";
     }
 
-    return tierFilter.build();
+    return filterExpression;
   }
 
   private List<String> resolveAllowedTiers(SecurityLevel level) {

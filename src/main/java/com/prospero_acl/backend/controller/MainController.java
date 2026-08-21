@@ -1,6 +1,7 @@
 package com.prospero_acl.backend.controller;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.prospero_acl.backend.model.dto.ReportContinueDTO;
 import com.prospero_acl.backend.model.dto.ReportCreateDTO;
 import com.prospero_acl.backend.model.dto.ReportResponseDTO;
 import com.prospero_acl.backend.model.dto.RequestDocumentUploadDTO;
@@ -57,6 +59,25 @@ public class MainController {
       Authentication authentication) {
 
     ReportResponseDTO reportResponseDTO = reportService.createReport(authentication.getName(), reportCreateOptions);
+    return ResponseEntity.ok(reportResponseDTO);
+  }
+
+  @PostMapping("/conversations/{reportId}/continue")
+  public ResponseEntity<ReportResponseDTO> continueReport(
+      @PathVariable UUID reportId,
+      @RequestBody ReportContinueDTO req,
+      Authentication authentication) {
+
+    ReportResponseDTO reportResponseDTO = reportService.continueReport(authentication.getName(), reportId, req);
+    return ResponseEntity.ok(reportResponseDTO);
+  }
+
+  @GetMapping("/conversations/{reportId}")
+  public ResponseEntity<ReportResponseDTO> getReport(
+      @PathVariable UUID reportId,
+      Authentication authentication) {
+
+    ReportResponseDTO reportResponseDTO = reportService.getReport(authentication.getName(), reportId);
     return ResponseEntity.ok(reportResponseDTO);
   }
 
