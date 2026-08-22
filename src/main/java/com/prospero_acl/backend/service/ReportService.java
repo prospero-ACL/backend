@@ -2,6 +2,7 @@ package com.prospero_acl.backend.service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -132,10 +133,22 @@ public class ReportService {
     return toResponseDTO(report);
   }
 
+  @Transactional(readOnly = true)
+  public Optional<ReportResponseDTO> getDraftReport(String principalId) {
+    User user = userRepo.findByProviderId(principalId)
+        .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+    return reportRepo
+        .findFirstByOwner_IdAndStatusInOrderByCreatedAtDesc(
+            user.getId(), List.of(ReportStatus.DRAFT, ReportStatus.IN_PROGRESS))
+        .map(this::toResponseDTO);
+  }
+
   private int nextPosition(Report report) {
     return report.getPrompts().size() + 1;
   }
 
+  // TODO: Confirm that DRAFT and IN_PROGRESS are merged
   private ReportStatus statusForPosition(int position) {
     return switch (position) {
       case 1 -> ReportStatus.DRAFT;
@@ -173,7 +186,8 @@ public class ReportService {
       DocumentScope scope,
       UUID userId) {
 
-    // QuestionAnswerAdvisor.FILTER_EXPRESSION is parsed as filter-expression DSL text
+    // QuestionAnswerAdvisor.FILTER_EXPRESSION is parsed as filter-expression DSL
+    // text
     // (FilterExpressionTextParser), not built from a Filter.Expression object.
     String tiers = allowedTiers.stream()
         .map(tier -> "'" + tier + "'")

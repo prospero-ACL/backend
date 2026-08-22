@@ -19,4 +19,14 @@ public class GlobalExceptionHandler {
   public ResponseEntity<String> handleReportCompleted(ReportCompletedException ex) {
     return ResponseEntity.status(HttpStatus.CONFLICT).body(ex.getMessage());
   }
+
+  @ExceptionHandler(EmptyDocumentException.class)
+  public ResponseEntity<String> handleEmptyDocument(EmptyDocumentException ex) {
+    return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ex.getMessage());
+  }
+
+  @ExceptionHandler(UnreadablePdfException.class)
+  public ResponseEntity<String> handleUnreadablePdf(UnreadablePdfException ex) {
+    return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ex.getMessage());
+  }
 }

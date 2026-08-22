@@ -133,11 +133,17 @@ creates the report and the next two modify the output of the same report. When
 the no of questions exceeds three is marked as `ReportStatus.COMPLETED` so the
 frontend can disable the "Ask" button.
 
-`DocumentService.saveDocument` is the ingestion path: splits text with `TokenTextSplitter`
-(chunk size 500, min 50 chars) and writes to the vector store with owner/filename/uploadedAt
-metadata. `getDocumentsByUser` lists distinct filenames for a user by similarity-searching with an
-empty query and a high `topK`, then de-duping chunks down to one row per filename — it's a listing
-hack, not a real search.
+`DocumentService.saveDocument` is the ingestion path: takes a `MultipartFile` (uploaded via
+`POST /api/v1/documents`, `multipart/form-data` with `file`/`userId`/`scope` parts — PDF text
+extraction happens server-side via Apache PDFBox, not client-side), splits the extracted text with
+`TokenTextSplitter` (chunk size 500, min 50 chars), and writes to the vector store with
+owner/filename/uploadedAt/privacy metadata (`privacy` is the lowercased `DocumentScope` chosen at
+upload time — must stay lowercase to match the tier strings `ReportService.resolveAllowedTiers`
+filters on). An unparseable PDF throws `UnreadablePdfException`; a PDF with no extractable text
+throws `EmptyDocumentException` — both map to `422` via `GlobalExceptionHandler`, so the upload only
+returns `200` once chunks are actually persisted. `getDocumentsByUser` lists distinct filenames for a
+user by similarity-searching with an empty query and a high `topK`, then de-duping chunks down to one
+row per filename — it's a listing hack, not a real search.
 
 ### Adding a new authenticated endpoint
 
