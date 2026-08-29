@@ -68,6 +68,9 @@ public class ReportService {
     List<String> allowedTiers = resolveAllowedTiers(user.getSecurityLevel());
     String filter = buildFilterExpression(allowedTiers, report.getScope(), user.getId());
 
+    // TODO: Add predefiend instructions to the agent to ensure it answers the
+    // question in a concise and accurate manner, and that it cites the source
+    // documents used to answer the question.
     String reply = ragService.query(req.prompt(), List.of(), filter);
 
     LlmReply replyEntity = new LlmReply();
@@ -148,13 +151,14 @@ public class ReportService {
     return report.getPrompts().size() + 1;
   }
 
-  // TODO: Confirm that DRAFT and IN_PROGRESS are merged
   private ReportStatus statusForPosition(int position) {
-    return switch (position) {
-      case 1 -> ReportStatus.DRAFT;
-      case 2 -> ReportStatus.IN_PROGRESS;
-      default -> ReportStatus.COMPLETED;
-    };
+    if (position == 1) {
+      return ReportStatus.DRAFT;
+    } else if (position < 3) {
+      return ReportStatus.IN_PROGRESS;
+    } else {
+      return ReportStatus.COMPLETED;
+    }
   }
 
   private List<Message> buildHistory(Report report) {
