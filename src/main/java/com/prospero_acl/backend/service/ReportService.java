@@ -125,6 +125,7 @@ public class ReportService {
     return toResponseDTO(report);
   }
 
+  // TODO: Should I add a TransactionManager to the config file?
   @Transactional(readOnly = true)
   public ReportResponseDTO getReport(String principalId, UUID reportId) {
     User user = userRepo.findByProviderId(principalId)
