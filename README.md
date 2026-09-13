@@ -12,3 +12,22 @@ Logout clears that cookie; there is no server-side token revocation, so a copied
 until it naturally expires.
 
 ## Document insertion
+
+> TODO
+
+## ACL Implementation
+
+- All the user levels can create create all the levels of documents
+- Plebian users can only read public documents and all the restricted documents
+  that they own
+- Eques users can read all the public and restricted documents and the elevated documents that they own
+- Patrician users can read all the public, restricted and elevated documents, no
+  matter who owns them
+
+|            | Plebian | Eques | Patrician |
+| ---------- | ------- | ----- | --------- |
+| ELEVATED   | None    | Owned | All       |
+| RESTRICTED | Owned   | All   | All       |
+| PUBLIC     | All     | All   | All       |
+
+---

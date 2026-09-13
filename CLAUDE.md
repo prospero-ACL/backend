@@ -90,7 +90,7 @@ credentials enabled, so the frontend must send cookies with requests, not bearer
 on the auth path is `@Transactional`, so a `User` loaded via `UserRepo.findByProviderId(...)` is
 detached by the time `oAuth2SuccessHandler` runs; touching `reports` on it (e.g. via the default
 Lombok `toString()`) throws `LazyInitializationException` — this previously crashed every
-*second* login for an existing user (a fresh `User` has a real in-memory `HashSet` for `reports`, so
+_second_ login for an existing user (a fresh `User` has a real in-memory `HashSet` for `reports`, so
 first-time registration never hit it).
 
 **Logout** (`AuthController.logout`) clears `SecurityContextHolder`, invalidates any `HttpSession`
@@ -151,3 +151,22 @@ Follow the existing controller pattern (`MainController`, `AuthController`): inj
 `Authentication`, call `.getName()` to get the providerId, and resolve the `User` via
 `UserRepo`/`UserService` if you need the entity. New endpoints are authenticated by default (see
 `Security.defaultSilterChain` — only `/oauth2/**` is `permitAll()`).
+
+## ACL Implementation
+
+This is the access control model for document retrieval:
+
+- All the user levels can create create all the levels of documents
+- Plebian users can only read public documents and all the restricted documents
+  that they own
+- Eques users can read all the public and restricted documents and the elevated documents that they own
+- Patrician users can read all the public, restricted and elevated documents, no
+  matter who owns them
+
+|            | Plebian | Eques | Patrician |
+| ---------- | ------- | ----- | --------- |
+| ELEVATED   | None    | Owned | All       |
+| RESTRICTED | Owned   | All   | All       |
+| PUBLIC     | All     | All   | All       |
+
+---

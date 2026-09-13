@@ -3,6 +3,8 @@ package com.prospero_acl.backend.controller;
 import java.util.List;
 import java.util.UUID;
 
+import jakarta.persistence.EntityNotFoundException;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.prospero_acl.backend.model.User;
 import com.prospero_acl.backend.model.dto.ReportContinueDTO;
 import com.prospero_acl.backend.model.dto.ReportCreateDTO;
 import com.prospero_acl.backend.model.dto.ReportResponseDTO;
@@ -42,22 +45,25 @@ public class MainController {
     return "Hello World";
   }
 
-  @GetMapping("/documents/{userId}")
-  public ResponseEntity<List<ResponseDocumentDTO>> getUserDocs(@PathVariable String userId) {
-    // quick guard
-    if (!userId.matches("^[a-zA-Z0-9_-]{1,64}$")) {
-      throw new IllegalArgumentException("Invalid userId");
-    }
-    List<ResponseDocumentDTO> responseDocumentDTO = documentService.getDocumentsByUser(userId);
+  @GetMapping("/documents")
+  public ResponseEntity<List<ResponseDocumentDTO>> getUserDocs(Authentication authentication) {
+    User user = resolveUser(authentication);
+    List<ResponseDocumentDTO> responseDocumentDTO = documentService.getDocumentsByUser(user.getId().toString());
     return ResponseEntity.ok(responseDocumentDTO);
   }
 
   @PostMapping(value = "/documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public void storeDocument(
       @RequestParam("file") MultipartFile file,
-      @RequestParam("userId") String userId,
-      @RequestParam("scope") DocumentScope scope) {
-    documentService.saveDocument(file, userId, scope);
+      @RequestParam("scope") DocumentScope scope,
+      Authentication authentication) {
+    User user = resolveUser(authentication);
+    documentService.saveDocument(file, user.getId().toString(), scope);
+  }
+
+  private User resolveUser(Authentication authentication) {
+    return userService.findByProviderId(authentication.getName())
+        .orElseThrow(() -> new EntityNotFoundException("User not found"));
   }
 
   @GetMapping("/me/security-level")

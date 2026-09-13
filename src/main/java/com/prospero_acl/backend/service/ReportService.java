@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -65,8 +64,7 @@ public class ReportService {
     userPromptRepo.save(prompt);
     report.getPrompts().add(prompt);
 
-    List<String> allowedTiers = resolveAllowedTiers(user.getSecurityLevel());
-    String filter = buildFilterExpression(allowedTiers, report.getScope(), user.getId());
+    String filter = buildFilterExpression(user.getSecurityLevel(), report.getScope(), user.getId());
 
     // TODO: Add predefiend instructions to the agent to ensure it answers the
     // question in a concise and accurate manner, and that it cites the source
@@ -107,8 +105,7 @@ public class ReportService {
     userPromptRepo.save(prompt);
     report.getPrompts().add(prompt);
 
-    List<String> allowedTiers = resolveAllowedTiers(user.getSecurityLevel());
-    String filter = buildFilterExpression(allowedTiers, report.getScope(), user.getId());
+    String filter = buildFilterExpression(user.getSecurityLevel(), report.getScope(), user.getId());
 
     String replyText = ragService.query(req.prompt(), history, filter);
 
@@ -125,7 +122,6 @@ public class ReportService {
     return toResponseDTO(report);
   }
 
-  // TODO: Should I add a TransactionManager to the config file?
   @Transactional(readOnly = true)
   public ReportResponseDTO getReport(String principalId, UUID reportId) {
     User user = userRepo.findByProviderId(principalId)
@@ -186,31 +182,38 @@ public class ReportService {
     return new ReportResponseDTO(report.getId(), report.getStatus(), turns);
   }
 
+  // QuestionAnswerAdvisor.FILTER_EXPRESSION is parsed as filter-expression DSL
+  // text (FilterExpressionTextParser), not built from a Filter.Expression
+  // object.
+  //
+  // Mirrors the ACL table in README.md: PUBLIC is always visible; RESTRICTED and
+  // ELEVATED are either fully open, owner-only, or fully closed depending on the
+  // caller's SecurityLevel.
   private String buildFilterExpression(
-      List<String> allowedTiers,
+      SecurityLevel level,
       DocumentScope scope,
       UUID userId) {
 
-    // QuestionAnswerAdvisor.FILTER_EXPRESSION is parsed as filter-expression DSL
-    // text
-    // (FilterExpressionTextParser), not built from a Filter.Expression object.
-    String tiers = allowedTiers.stream()
-        .map(tier -> "'" + tier + "'")
-        .collect(Collectors.joining(", "));
-    String filterExpression = "privacy in [" + tiers + "]";
+    String owner = userId.toString();
+    List<String> clauses = new ArrayList<>();
+    clauses.add("privacy == 'public'");
+    switch (level) {
+      case PLEBIAN -> clauses.add("(privacy == 'restricted' && owner == '" + owner + "')");
+      case EQUES -> {
+        clauses.add("privacy == 'restricted'");
+        clauses.add("(privacy == 'elevated' && owner == '" + owner + "')");
+      }
+      case PATRICIAN -> {
+        clauses.add("privacy == 'restricted'");
+        clauses.add("privacy == 'elevated'");
+      }
+    }
 
+    String filterExpression = "(" + String.join(" || ", clauses) + ")";
     if (scope == DocumentScope.RESTRICTED) {
-      filterExpression += " && owner == '" + userId + "'";
+      filterExpression += " && owner == '" + owner + "'";
     }
 
     return filterExpression;
-  }
-
-  private List<String> resolveAllowedTiers(SecurityLevel level) {
-    return switch (level) {
-      case PLEBIAN -> List.of("public");
-      case EQUES -> List.of("public", "restricted");
-      case PATRICIAN -> List.of("public", "restricted", "elevated");
-    };
   }
 }
