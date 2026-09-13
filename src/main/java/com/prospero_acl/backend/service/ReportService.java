@@ -185,33 +185,14 @@ public class ReportService {
   // QuestionAnswerAdvisor.FILTER_EXPRESSION is parsed as filter-expression DSL
   // text (FilterExpressionTextParser), not built from a Filter.Expression
   // object.
-  //
-  // Mirrors the ACL table in README.md: PUBLIC is always visible; RESTRICTED and
-  // ELEVATED are either fully open, owner-only, or fully closed depending on the
-  // caller's SecurityLevel.
   private String buildFilterExpression(
       SecurityLevel level,
       DocumentScope scope,
       UUID userId) {
 
-    String owner = userId.toString();
-    List<String> clauses = new ArrayList<>();
-    clauses.add("privacy == 'public'");
-    switch (level) {
-      case PLEBIAN -> clauses.add("(privacy == 'restricted' && owner == '" + owner + "')");
-      case EQUES -> {
-        clauses.add("privacy == 'restricted'");
-        clauses.add("(privacy == 'elevated' && owner == '" + owner + "')");
-      }
-      case PATRICIAN -> {
-        clauses.add("privacy == 'restricted'");
-        clauses.add("privacy == 'elevated'");
-      }
-    }
-
-    String filterExpression = "(" + String.join(" || ", clauses) + ")";
+    String filterExpression = AclFilter.visibilityClause(level, userId);
     if (scope == DocumentScope.RESTRICTED) {
-      filterExpression += " && owner == '" + owner + "'";
+      filterExpression += " && owner == '" + userId + "'";
     }
 
     return filterExpression;

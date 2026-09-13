@@ -12,12 +12,14 @@ import com.prospero_acl.backend.exception.UnreadablePdfException;
 import com.prospero_acl.backend.model.User;
 import com.prospero_acl.backend.model.dto.ResponseDocumentDTO;
 import com.prospero_acl.backend.model.enums.DocumentScope;
+import com.prospero_acl.backend.model.enums.SecurityLevel;
 import com.prospero_acl.backend.repo.UserRepo;
 
 import java.io.IOException;
 import java.util.Date;
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -65,36 +67,55 @@ public class DocumentService {
     vectorStore.add(documents);
   }
 
-  public List<ResponseDocumentDTO> getDocumentsByUser(String userId) {
+  // Uses the same visibility rule as RAG retrieval (ReportService), so this
+  // listing/selection endpoint never offers a document the caller couldn't
+  // actually have retrieved into a report. For EQUES/PATRICIAN this can
+  // include documents owned by other users, not just the caller's own.
+  public List<ResponseDocumentDTO> getDocumentsByUser(String callerId, SecurityLevel level) {
+    String filterExpression = AclFilter.visibilityClause(level, UUID.fromString(callerId));
+
     SearchRequest request = SearchRequest.builder()
         .query(" ")
         .topK(1000)
-        .filterExpression("owner == '" + userId + "'")
+        .filterExpression(filterExpression)
         .build();
 
-    // Every result matches owner == userId, so the owning User is resolved once.
-    String ownerName = userRepo.findById(UUID.fromString(userId))
-        .map(User::getName)
-        .filter(Objects::nonNull)
-        .orElse(userId);
-
-    List<ResponseDocumentDTO> searchResult = vectorStore.similaritySearch(request)
+    List<Document> uniqueDocs = vectorStore.similaritySearch(request)
         .stream()
         .collect(Collectors.toMap(
-            doc -> (String) doc.getMetadata().get("filename"),
+            // filename alone isn't unique once results can span owners, so
+            // dedupe chunks by (filename, owner) instead.
+            doc -> doc.getMetadata().get("filename") + "|" + doc.getMetadata().get("owner"),
             doc -> doc,
-            (existing, replacement) -> existing // keep first chunk per filename
+            (existing, replacement) -> existing // keep first chunk per document
         ))
         .values()
         .stream()
-        .map(doc -> new ResponseDocumentDTO(
-            doc.getId(),
-            (String) doc.getMetadata().get("filename"),
-            new Date((Long) doc.getMetadata().get("uploadedAt")).toString(),
-            doc.getMetadata().get("privacy").toString(),
-            ownerName))
         .toList();
 
-    return searchResult;
+    Map<UUID, String> ownerNames = resolveOwnerNames(uniqueDocs);
+
+    return uniqueDocs.stream()
+        .map(doc -> {
+          UUID ownerId = UUID.fromString(doc.getMetadata().get("owner").toString());
+          String ownerName = ownerNames.getOrDefault(ownerId, ownerId.toString());
+          return new ResponseDocumentDTO(
+              doc.getId(),
+              (String) doc.getMetadata().get("filename"),
+              new Date((Long) doc.getMetadata().get("uploadedAt")).toString(),
+              doc.getMetadata().get("privacy").toString(),
+              ownerName);
+        })
+        .toList();
+  }
+
+  private Map<UUID, String> resolveOwnerNames(List<Document> docs) {
+    Set<UUID> ownerIds = docs.stream()
+        .map(doc -> UUID.fromString(doc.getMetadata().get("owner").toString()))
+        .collect(Collectors.toSet());
+
+    return userRepo.findAllById(ownerIds).stream()
+        .filter(user -> user.getName() != null)
+        .collect(Collectors.toMap(User::getId, User::getName));
   }
 }

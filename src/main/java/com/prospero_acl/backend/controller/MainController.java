@@ -48,7 +48,8 @@ public class MainController {
   @GetMapping("/documents")
   public ResponseEntity<List<ResponseDocumentDTO>> getUserDocs(Authentication authentication) {
     User user = resolveUser(authentication);
-    List<ResponseDocumentDTO> responseDocumentDTO = documentService.getDocumentsByUser(user.getId().toString());
+    List<ResponseDocumentDTO> responseDocumentDTO = documentService.getDocumentsByUser(
+        user.getId().toString(), user.getSecurityLevel());
     return ResponseEntity.ok(responseDocumentDTO);
   }
 
