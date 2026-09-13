@@ -9,12 +9,16 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.prospero_acl.backend.exception.EmptyDocumentException;
 import com.prospero_acl.backend.exception.UnreadablePdfException;
+import com.prospero_acl.backend.model.User;
 import com.prospero_acl.backend.model.dto.ResponseDocumentDTO;
 import com.prospero_acl.backend.model.enums.DocumentScope;
+import com.prospero_acl.backend.repo.UserRepo;
 
 import java.io.IOException;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.ai.document.Document;
@@ -28,6 +32,9 @@ public class DocumentService {
 
   @Autowired
   private VectorStore vectorStore;
+
+  @Autowired
+  private UserRepo userRepo;
 
   public void saveDocument(MultipartFile file, String userId, DocumentScope scope) {
     String fileName = file.getOriginalFilename();
@@ -65,6 +72,12 @@ public class DocumentService {
         .filterExpression("owner == '" + userId + "'")
         .build();
 
+    // Every result matches owner == userId, so the owning User is resolved once.
+    String ownerName = userRepo.findById(UUID.fromString(userId))
+        .map(User::getName)
+        .filter(Objects::nonNull)
+        .orElse(userId);
+
     List<ResponseDocumentDTO> searchResult = vectorStore.similaritySearch(request)
         .stream()
         .collect(Collectors.toMap(
@@ -77,7 +90,9 @@ public class DocumentService {
         .map(doc -> new ResponseDocumentDTO(
             doc.getId(),
             (String) doc.getMetadata().get("filename"),
-            new Date((Long) doc.getMetadata().get("uploadedAt")).toString()))
+            new Date((Long) doc.getMetadata().get("uploadedAt")).toString(),
+            doc.getMetadata().get("privacy").toString(),
+            ownerName))
         .toList();
 
     return searchResult;
