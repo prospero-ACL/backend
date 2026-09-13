@@ -208,9 +208,9 @@ public class ReportService {
 
   private List<String> resolveAllowedTiers(SecurityLevel level) {
     return switch (level) {
-      case LOW -> List.of("public");
-      case MEDIUM -> List.of("public", "restricted");
-      case HIGH -> List.of("public", "restricted", "elevated");
+      case PLEBIAN -> List.of("public");
+      case EQUES -> List.of("public", "restricted");
+      case PATRICIAN -> List.of("public", "restricted", "elevated");
     };
   }
 }

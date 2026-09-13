@@ -56,7 +56,7 @@ public class User {
 
   @Column(nullable = false)
   @Enumerated(EnumType.STRING)
-  private SecurityLevel securityLevel = SecurityLevel.LOW;
+  private SecurityLevel securityLevel = SecurityLevel.PLEBIAN;
 
   @CreationTimestamp
   @Column(nullable = false, updatable = false)

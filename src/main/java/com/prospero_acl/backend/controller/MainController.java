@@ -20,9 +20,11 @@ import com.prospero_acl.backend.model.dto.ReportContinueDTO;
 import com.prospero_acl.backend.model.dto.ReportCreateDTO;
 import com.prospero_acl.backend.model.dto.ReportResponseDTO;
 import com.prospero_acl.backend.model.dto.ResponseDocumentDTO;
+import com.prospero_acl.backend.model.dto.SecurityLevelDTO;
 import com.prospero_acl.backend.model.enums.DocumentScope;
 import com.prospero_acl.backend.service.DocumentService;
 import com.prospero_acl.backend.service.ReportService;
+import com.prospero_acl.backend.service.UserService;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -32,6 +34,8 @@ public class MainController {
   private DocumentService documentService;
   @Autowired
   private ReportService reportService;
+  @Autowired
+  private UserService userService;
 
   @GetMapping("/test")
   public String getHello() {
@@ -54,6 +58,21 @@ public class MainController {
       @RequestParam("userId") String userId,
       @RequestParam("scope") DocumentScope scope) {
     documentService.saveDocument(file, userId, scope);
+  }
+
+  @GetMapping("/me/security-level")
+  public ResponseEntity<SecurityLevelDTO> getSecurityLevel(Authentication authentication) {
+    SecurityLevelDTO securityLevelDTO = new SecurityLevelDTO(
+        userService.getSecurityLevel(authentication.getName()));
+    return ResponseEntity.ok(securityLevelDTO);
+  }
+
+  @PostMapping("/me/security-level")
+  public ResponseEntity<Void> updateSecurityLevel(
+      @RequestBody SecurityLevelDTO req,
+      Authentication authentication) {
+    userService.updateSecurityLevel(authentication.getName(), req.securityLevel());
+    return ResponseEntity.ok().build();
   }
 
   @PostMapping("/conversations/create")
