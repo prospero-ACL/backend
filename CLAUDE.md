@@ -152,7 +152,7 @@ Follow the existing controller pattern (`MainController`, `AuthController`): inj
 `UserRepo`/`UserService` if you need the entity. New endpoints are authenticated by default (see
 `Security.defaultSilterChain` — only `/oauth2/**` is `permitAll()`).
 
-## ACL Implementation
+### ACL Implementation
 
 This is the access control model for document retrieval:
 
@@ -169,4 +169,18 @@ This is the access control model for document retrieval:
 | RESTRICTED | Owned   | All   | All       |
 | PUBLIC     | All     | All   | All       |
 
----
+### Classifier
+
+`ReportService.createReport`/`continueReport` gate every prompt through `RAGService.isRelevant`
+before doing any retrieval or persistence — an LLM classification call (not retrieval-score
+thresholding), separate from `RAGService.query`'s `QuestionAnswerAdvisor`-backed call. It uses
+Spring AI structured output (`.call().entity(RelevanceVerdict.class)`, `RelevanceVerdict` a
+`record(boolean relevant)` nested in `RAGService`) with a system prompt instructing the model to
+reject small talk, general-knowledge questions, and instruction-override attempts, accepting only
+things answerable from the document corpus or a natural follow-up in the ongoing conversation
+(hence `continueReport` passes the same `buildHistory(report)` list used for the real query).
+
+A rejection throws `IrrelevantQueryException` (mapped to `422` via `GlobalExceptionHandler`,
+alongside `EmptyDocumentException`/`UnreadablePdfException`) **before** any `Report`/`UserPrompt`
+is persisted — mirrors the `ReportCompletedException` short-circuit for the 3-question limit, so a
+rejected prompt costs nothing: no DB row, no turn consumed, no call to `ragService.query`.
