@@ -24,10 +24,20 @@ until it naturally expires.
 - Patrician users can read all the public, restricted and elevated documents, no
   matter who owns them
 
-|            | Plebian | Eques | Patrician |
-| ---------- | ------- | ----- | --------- |
-| ELEVATED   | None    | Owned | All       |
-| RESTRICTED | Owned   | All   | All       |
-| PUBLIC     | All     | All   | All       |
+|                           | Plebian | Eques | Patrician |
+| ------------------------- | ------- | ----- | --------- |
+| ELEVATED (fully detailed) | None    | Owned | All       |
+| RESTRICTED(mid detail)    | Owned   | All   | All       |
+| PUBLIC (summary)          | All     | All   | All       |
 
 ---
+
+### na pernei mono tou ta sosta docs
+
+### diaforetika "tipou" document, (kanonismoi, FEK)
+
+### o owner vlepei panta
+
+### No user CRUD
+
+### apo 500 to mikrotera docs

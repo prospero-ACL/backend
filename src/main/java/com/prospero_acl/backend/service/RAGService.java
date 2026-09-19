@@ -38,6 +38,7 @@ public class RAGService {
   public boolean isRelevant(String text, List<Message> history) {
     RelevanceVerdict verdict = chatClient
         .prompt()
+        // add better guardrails, no generation
         .system("""
             You are a gatekeeper for a document question-answering assistant. The assistant only
             answers questions that could plausibly be answered using a corpus of uploaded
