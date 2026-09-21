@@ -107,6 +107,13 @@
 			<scope>test</scope>
     </dependency>
 
+    <!-- Spring Boot 4 moved auto-configuration into per-technology modules: flyway-core on the
+         classpath is no longer enough to activate Flyway, the starter supplies the autoconfig. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-flyway</artifactId>
+    </dependency>
+
     <dependency>
       <groupId>org.flywaydb</groupId>
       <artifactId>flyway-database-postgresql</artifactId>
