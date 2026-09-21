@@ -19,14 +19,14 @@ public class RAGService {
     this.vectorStore = vectorStore;
   }
 
-  public String query(String text, List<Message> history, String filter) {
+  // No ACL filter is passed: the vector store is reached through a connection whose Postgres role
+  // already limits retrieval to the caller's clearance (see CorpusDataSourceConfig).
+  public String query(String text, List<Message> history) {
     return chatClient
         .prompt()
         .messages(history)
         .user(text)
-        .advisors(a -> a
-            .param(QuestionAnswerAdvisor.FILTER_EXPRESSION, filter)
-            .advisors(QuestionAnswerAdvisor.builder(vectorStore).build()))
+        .advisors(a -> a.advisors(QuestionAnswerAdvisor.builder(vectorStore).build()))
         .call()
         .content();
   }

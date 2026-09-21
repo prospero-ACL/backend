@@ -24,9 +24,7 @@ import com.prospero_acl.backend.model.dto.ReportContinueDTO;
 import com.prospero_acl.backend.model.dto.ReportCreateDTO;
 import com.prospero_acl.backend.model.dto.ReportResponseDTO;
 import com.prospero_acl.backend.model.dto.ReportTurnDTO;
-import com.prospero_acl.backend.model.enums.DocumentScope;
 import com.prospero_acl.backend.model.enums.ReportStatus;
-import com.prospero_acl.backend.model.enums.SecurityLevel;
 import com.prospero_acl.backend.repo.LlmReplyRepo;
 import com.prospero_acl.backend.repo.ReportRepo;
 import com.prospero_acl.backend.repo.UserPromptRepo;
@@ -57,7 +55,6 @@ public class ReportService {
     Report report = new Report();
     report.setOwner(user);
     report.setStatus(ReportStatus.DRAFT);
-    report.setScope(req.scope());
     report = reportRepo.save(report);
 
     int position = nextPosition(report);
@@ -69,12 +66,10 @@ public class ReportService {
     userPromptRepo.save(prompt);
     report.getPrompts().add(prompt);
 
-    String filter = buildFilterExpression(user.getSecurityLevel(), report.getScope(), user.getId());
-
     // TODO: Add predefiend instructions to the agent to ensure it answers the
     // question in a concise and accurate manner, and that it cites the source
     // documents used to answer the question.
-    String reply = ragService.query(req.prompt(), List.of(), filter);
+    String reply = ragService.query(req.prompt(), List.of());
 
     LlmReply replyEntity = new LlmReply();
     replyEntity.setReport(report);
@@ -115,9 +110,7 @@ public class ReportService {
     userPromptRepo.save(prompt);
     report.getPrompts().add(prompt);
 
-    String filter = buildFilterExpression(user.getSecurityLevel(), report.getScope(), user.getId());
-
-    String replyText = ragService.query(req.prompt(), history, filter);
+    String replyText = ragService.query(req.prompt(), history);
 
     LlmReply replyEntity = new LlmReply();
     replyEntity.setReport(report);
@@ -192,19 +185,4 @@ public class ReportService {
     return new ReportResponseDTO(report.getId(), report.getStatus(), turns);
   }
 
-  // QuestionAnswerAdvisor.FILTER_EXPRESSION is parsed as filter-expression DSL
-  // text (FilterExpressionTextParser), not built from a Filter.Expression
-  // object.
-  private String buildFilterExpression(
-      SecurityLevel level,
-      DocumentScope scope,
-      UUID userId) {
-
-    String filterExpression = AclFilter.visibilityClause(level, userId);
-    if (scope == DocumentScope.RESTRICTED) {
-      filterExpression += " && owner == '" + userId + "'";
-    }
-
-    return filterExpression;
-  }
 }

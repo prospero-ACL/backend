@@ -191,12 +191,28 @@ the user's clearance returns books `1` / `1,2` / `1,2,3`. `pg_stat_activity` con
 pools connected as `postgres_plebian`, `postgres_eques` and `postgres_patrician`, and interleaving
 patrician and plebian requests shows no clearance leaking between them.
 
-### Stage 4 — Retire application-level ACL `TODO`
-Delete `service/AclFilter.java` and `model/enums/DocumentScope.java`; drop the filter argument from
-`RAGService.query` and the `QuestionAnswerAdvisor.FILTER_EXPRESSION` param; delete
-`buildFilterExpression`. Replace the `getDocumentsByUser` listing hack with a plain
-`SELECT DISTINCT metadata ->> 'trilogy'` — run on the **app** connection, since trilogy titles are
-public to every tier.
+### Stage 4 — Retire application-level ACL `DONE`
+`AclFilter`, `DocumentScope` and `ResponseDocumentDTO` are deleted, along with
+`buildFilterExpression`, the `QuestionAnswerAdvisor.FILTER_EXPRESSION` param and the `scope`/`chunks`
+fields on `ReportCreateDTO`. `V3__drop_report_scope.sql` drops the now-meaningless column.
+`DocumentService.listTrilogies()` replaces the similarity-search listing hack with
+`SELECT DISTINCT metadata ->> 'trilogy'` on the **application** connection, and `GET /api/v1/documents`
+returns trilogy titles.
+
+Two configuration problems surfaced and were fixed rather than worked around:
+- Declaring any `JdbcOperations` bean makes Boot's `JdbcTemplate` auto-configuration back off, so the
+  application-side template is now declared explicitly as `appJdbcTemplate`.
+- Spring AI's `PgVectorStoreAutoConfiguration` cannot choose between two `JdbcTemplate`s. It was only
+  ever inert because `spring.main.allow-bean-definition-overriding=true` let our bean replace its
+  own — the ambiguity noted in section 3. It is now excluded explicitly, that override flag is gone,
+  and the inert `spring.ai.vectorstore.pgvector.*` properties were removed.
+
+**Verified:** every tier gets the same trilogy titles from `GET /api/v1/documents` while the chunks
+behind them stay gated (`books=1` / `1,2` / `1,2,3`), and `verify-acl.sh` still passes.
+
+*Interim consequence:* uploads no longer write a `privacy` key and do not yet write `trilogy`/`book`,
+so newly uploaded documents are invisible to every tier except patrician until Stage 6 lands. That is
+the fail-closed direction, but it means upload is effectively inert in the meantime.
 
 ### Stage 5 — Remove the relevance classifier `TODO`
 Delete `RAGService.isRelevant`, the `RelevanceVerdict` record, `IrrelevantQueryException`, its 422

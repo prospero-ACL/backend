@@ -22,9 +22,7 @@ import com.prospero_acl.backend.model.User;
 import com.prospero_acl.backend.model.dto.ReportContinueDTO;
 import com.prospero_acl.backend.model.dto.ReportCreateDTO;
 import com.prospero_acl.backend.model.dto.ReportResponseDTO;
-import com.prospero_acl.backend.model.dto.ResponseDocumentDTO;
 import com.prospero_acl.backend.model.dto.SecurityLevelDTO;
-import com.prospero_acl.backend.model.enums.DocumentScope;
 import com.prospero_acl.backend.service.DocumentService;
 import com.prospero_acl.backend.service.ReportService;
 import com.prospero_acl.backend.service.UserService;
@@ -46,20 +44,16 @@ public class MainController {
   }
 
   @GetMapping("/documents")
-  public ResponseEntity<List<ResponseDocumentDTO>> getUserDocs(Authentication authentication) {
-    User user = resolveUser(authentication);
-    List<ResponseDocumentDTO> responseDocumentDTO = documentService.getDocumentsByUser(
-        user.getId().toString(), user.getSecurityLevel());
-    return ResponseEntity.ok(responseDocumentDTO);
+  public ResponseEntity<List<String>> getTrilogies() {
+    return ResponseEntity.ok(documentService.listTrilogies());
   }
 
   @PostMapping(value = "/documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public void storeDocument(
       @RequestParam("file") MultipartFile file,
-      @RequestParam("scope") DocumentScope scope,
       Authentication authentication) {
     User user = resolveUser(authentication);
-    documentService.saveDocument(file, user.getId().toString(), scope);
+    documentService.saveDocument(file, user.getId().toString());
   }
 
   private User resolveUser(Authentication authentication) {

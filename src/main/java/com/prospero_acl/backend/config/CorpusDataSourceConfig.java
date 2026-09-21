@@ -71,6 +71,13 @@ public class CorpusDataSourceConfig {
     return router;
   }
 
+  // Declaring any JdbcOperations bean makes Spring Boot's own JdbcTemplate auto-configuration back
+  // off, so the application-side template has to be declared explicitly too.
+  @Bean
+  public JdbcTemplate appJdbcTemplate(@Qualifier("appDataSource") DataSource appDataSource) {
+    return new JdbcTemplate(appDataSource);
+  }
+
   @Bean
   public JdbcTemplate corpusJdbcTemplate(@Qualifier("corpusDataSource") DataSource corpusDataSource) {
     return new JdbcTemplate(corpusDataSource);
