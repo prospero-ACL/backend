@@ -169,11 +169,27 @@ each role sees only its permitted books, that unlabelled chunks fail closed, tha
 insert, and that no tier role can read `users`, relabel a chunk, or disable RLS. Re-run it after any
 later change; no Java was involved in any of this.
 
-### Stage 3 — Connection routing `TODO`
-`SecurityLevelContext` ThreadLocal; the filter that sets and clears it; the
-`AbstractRoutingDataSource`; pool sizing; rewiring `VectorDatabase.vectorStore` to the qualified
-vector `JdbcTemplate`.
-**Done when:** the same query issued by two users at different tiers returns different chunk counts.
+### Stage 3 — Connection routing `DONE`
+`ClearanceContext` (ThreadLocal) + `ClearanceFilter`, registered after `JwtAuthFilter`, resolve the
+caller's clearance per request via the existing `UserService.getSecurityLevel`.
+`CorpusDataSourceConfig` defines the `@Primary` application DataSource (JPA + Flyway) alongside a
+`corpusDataSource` that routes to one Hikari pool per tier role, and `VectorDatabase.vectorStore` now
+takes the qualified `corpusJdbcTemplate`.
+
+Three things that are easy to get wrong here:
+- `ClearanceFilter` is deliberately **not** a `@Component`. Spring Boot would otherwise also register
+  it outside the security chain, where no authentication exists yet, and `OncePerRequestFilter` would
+  then suppress the in-chain invocation that does.
+- The router **throws** when no clearance is set rather than defaulting to a tier, so a missing
+  context is a loud failure instead of a silent grant. Nothing opens a corpus connection at startup,
+  so this does not affect boot.
+- The ThreadLocal is cleared in a `finally` block; request threads are pooled, and a leaked value
+  would elevate the next request on that thread.
+
+**Verified end-to-end:** with the same JWT and the same `GET /api/v1/documents` call, changing only
+the user's clearance returns books `1` / `1,2` / `1,2,3`. `pg_stat_activity` confirms three separate
+pools connected as `postgres_plebian`, `postgres_eques` and `postgres_patrician`, and interleaving
+patrician and plebian requests shows no clearance leaking between them.
 
 ### Stage 4 — Retire application-level ACL `TODO`
 Delete `service/AclFilter.java` and `model/enums/DocumentScope.java`; drop the filter argument from

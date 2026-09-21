@@ -66,6 +66,7 @@ public class Security {
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
         .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+        .addFilterAfter(new ClearanceFilter(userService), JwtAuthFilter.class)
 
         .oauth2Login(oauth2 -> oauth2
             .successHandler(oAuth2SuccessHandler())
