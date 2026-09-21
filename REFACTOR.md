@@ -152,11 +152,22 @@ table's singular name, the `scope`/`status` check constraints). Later stages cha
 ordinary migrations, which keeps existing and fresh databases converging on the same state.
 **Done when:** the app boots clean against both an existing and a wiped `postgres_data` volume.
 
-### Stage 2 — Postgres ACL layer `TODO`
-Migration creating the three roles, grants, RLS policies, and an index on `(metadata ->> 'book')`.
-Role passwords into `infra/env.localdev`, the `backend` service env in
-`infra/docker-compose-localdev.yml`, and `application.properties`.
-**Done when:** `psql` as each role returns only the permitted books. Verifiable with zero Java changes.
+### Stage 2 — Postgres ACL layer `DONE`
+`V2__acl_roles_and_rls.sql` converts `metadata` to `jsonb`, creates `postgres_plebian` /
+`postgres_eques` / `postgres_patrician`, grants `SELECT` to all three and write access to the
+patrician role only, enables RLS, and adds one policy per tier plus an index on
+`(metadata ->> 'book')`. Role passwords live in `infra/env.localdev` (gitignored) and reach the
+migration as Flyway placeholders, so they are never hardcoded in a checksummed file; the `backend`
+service already picks them up through `env_file`.
+
+Two details worth remembering: roles are **cluster-scoped**, so they survive `DROP DATABASE` and the
+migration has to create them conditionally; and RLS **denies by default**, so any tier whose policy
+is missing sees nothing rather than everything.
+
+Verified by `infra/verify-acl.sh` (11 checks, all passing) — it seeds one chunk per book, asserts
+each role sees only its permitted books, that unlabelled chunks fail closed, that only patricians can
+insert, and that no tier role can read `users`, relabel a chunk, or disable RLS. Re-run it after any
+later change; no Java was involved in any of this.
 
 ### Stage 3 — Connection routing `TODO`
 `SecurityLevelContext` ThreadLocal; the filter that sets and clears it; the
@@ -214,9 +225,8 @@ and `CLAUDE.md` cites a `resolveAllowedTiers` method that no longer exists.
 
 The thesis claim is "the database refuses out-of-clearance rows", so it must be tested at that level.
 
-- **SQL, per role.** Connect as each role and assert row counts per book. Catches the real failure
-  modes: a policy targeting the wrong role, RLS not enabled, the app role accidentally reused,
-  superuser bypass.
+- **SQL, per role** — implemented as `infra/verify-acl.sh`. Catches the real failure modes: a policy
+  targeting the wrong role, RLS not enabled, the app role accidentally reused, superuser bypass.
 - **Integration test.** Testcontainers with `pgvector/pgvector:pg16`, one test per tier asserting a
   plebian-routed connection cannot read book 2 or 3. This is the single highest-value test in the
   repo; nothing like it exists today.
