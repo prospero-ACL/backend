@@ -214,10 +214,15 @@ behind them stay gated (`books=1` / `1,2` / `1,2,3`), and `verify-acl.sh` still 
 so newly uploaded documents are invisible to every tier except patrician until Stage 6 lands. That is
 the fail-closed direction, but it means upload is effectively inert in the meantime.
 
-### Stage 5 — Remove the relevance classifier `TODO`
-Delete `RAGService.isRelevant`, the `RelevanceVerdict` record, `IrrelevantQueryException`, its 422
-mapping, and both gate call sites. Dropped for now; the strict grounding prompt from section 4
-replaces part of its job.
+### Stage 5 — Remove the relevance classifier `DONE`
+`RAGService.isRelevant`, the `RelevanceVerdict` record, `IrrelevantQueryException`, its 422 mapping
+and both gate call sites are gone. Every prompt now goes straight to retrieval, which also removes
+one LLM round-trip per question.
+
+**Verified:** `POST /api/v1/conversations/create` returns 200 with a real reply. Asked as a plebian
+against a corpus whose chunks carry no `book` key, the model answered *"I can't answer that from the
+provided context"* — RLS returned nothing and the model refused instead of drawing on its own
+knowledge, which is the behaviour section 4 depends on.
 
 ### Stage 6 — Trilogy ingestion `TODO`
 `POST /api/v1/documents` takes exactly 3 files, their positions, and `trilogyName`. PATRICIAN-only at

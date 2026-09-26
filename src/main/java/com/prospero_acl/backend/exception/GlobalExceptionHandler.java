@@ -29,9 +29,4 @@ public class GlobalExceptionHandler {
   public ResponseEntity<String> handleUnreadablePdf(UnreadablePdfException ex) {
     return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ex.getMessage());
   }
-
-  @ExceptionHandler(IrrelevantQueryException.class)
-  public ResponseEntity<String> handleIrrelevantQuery(IrrelevantQueryException ex) {
-    return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ex.getMessage());
-  }
 }

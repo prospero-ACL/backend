@@ -14,7 +14,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.prospero_acl.backend.exception.IrrelevantQueryException;
 import com.prospero_acl.backend.exception.ReportCompletedException;
 import com.prospero_acl.backend.model.LlmReply;
 import com.prospero_acl.backend.model.Report;
@@ -47,10 +46,6 @@ public class ReportService {
   public ReportResponseDTO createReport(String principalId, ReportCreateDTO req) {
     User user = userRepo.findByProviderId(principalId)
         .orElseThrow(() -> new EntityNotFoundException("User not found"));
-
-    if (!ragService.isRelevant(req.prompt(), List.of())) {
-      throw new IrrelevantQueryException("This assistant only answers questions about your documents");
-    }
 
     Report report = new Report();
     report.setOwner(user);
@@ -96,10 +91,6 @@ public class ReportService {
     }
 
     List<Message> history = buildHistory(report);
-
-    if (!ragService.isRelevant(req.prompt(), history)) {
-      throw new IrrelevantQueryException("This assistant only answers questions about your documents");
-    }
 
     int position = nextPosition(report);
 
