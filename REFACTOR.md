@@ -251,13 +251,34 @@ Points worth remembering:
 book count, 202 then `PENDING → RUNNING → COMPLETED` (3 books, 93 chunks, ~15s), re-upload replacing
 rather than duplicating, and per-tier visibility of 21 / 51 / 93 chunks.
 
-### Stage 7 — Report → Conversation `TODO`
-Rename entity/repo/service/DTOs (the HTTP paths are already `/api/v1/conversations/*`). Delete
-`ReportStatus`, `ReportCompletedException` and its 409 mapping, `statusForPosition`, `Report.scope`,
-`ReportChunk`. Replace `/conversations/draft` with `/conversations/latest`. Fix
-`buildHistory`/`toResponseDTO`, which zip prompts to replies by list index and will throw
-`IndexOutOfBoundsException` once the lists can desynchronise. Add a history window so unbounded
-conversations do not grow the prompt without limit.
+### Stage 7 — Report → Conversation `DONE`
+`Report` → `Conversation` across entity, repo, service and DTOs; `ReportStatus`,
+`ReportCompletedException` and its 409 mapping, `statusForPosition` and `ReportChunk` are deleted.
+`V5__report_to_conversation.sql` renames `report` → `conversation` and `report_id` →
+`conversation_id`, drops `status` and `report_chunks`, and adds `UNIQUE (conversation_id, position)`
+on both prompts and replies. `/conversations/draft` is replaced by `/conversations/latest` (most
+recently updated conversation, `204` if none). The response is now `{id, turns}` — no `status`.
+Prompts and replies are paired **by position**, not list index, so a prompt without a reply renders
+with `reply: null` and is left out of replayed history; the next position is `max + 1`, not
+`size + 1`. Only the last `app.conversation.history-turns` (6) answered turns are replayed.
+
+Points worth remembering:
+- **Baselined and fresh databases have different constraint names.** The live database was built by
+  Hibernate, so its foreign keys are called `fk4hbg…`, not V1's `report_owner_fkey`. The first V5
+  draft renamed them by V1's names and failed (Flyway rolled back cleanly). V5 now drops the foreign
+  keys by catalogue lookup and recreates them under canonical names. Any later migration touching a
+  pre-Flyway constraint has the same trap.
+- With `status` gone, adding a turn no longer changes the `conversation` row, so `@UpdateTimestamp`
+  never fires on its own. `addTurn` touches `updatedAt` explicitly; without it `/latest` goes stale.
+- `Conversation.prompts`/`replies` are `@ToString.Exclude`/`@EqualsAndHashCode.Exclude`; the old
+  `Report` let Lombok recurse prompt → report → prompt.
+
+**Verified** against both a fresh database (V1 → V3 → V5 in a scratch DB) and the live baselined one,
+which end up with identical constraints. Over HTTP: `/latest` 204 then 200; a fourth question
+returns 200 (previously 409); the model recalls the first question from replayed history; an orphan
+prompt injected by SQL returns `reply: null` instead of a 500 and the next turn takes position 6;
+another user gets 404 on someone else's conversation. The history window cut-off itself was not
+exercised (it needs more than 6 turns).
 
 ### Stage 8 — Security level lockdown `TODO`
 Users must not change their own clearance: with DB roles it decides which Postgres role their queries

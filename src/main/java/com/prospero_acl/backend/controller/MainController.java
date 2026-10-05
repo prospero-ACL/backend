@@ -26,14 +26,14 @@ import com.prospero_acl.backend.exception.InsufficientClearanceException;
 import com.prospero_acl.backend.exception.UnreadablePdfException;
 import com.prospero_acl.backend.model.User;
 import com.prospero_acl.backend.model.dto.BookUploadDTO;
+import com.prospero_acl.backend.model.dto.ConversationContinueDTO;
+import com.prospero_acl.backend.model.dto.ConversationCreateDTO;
+import com.prospero_acl.backend.model.dto.ConversationResponseDTO;
 import com.prospero_acl.backend.model.dto.IngestionJobDTO;
 import com.prospero_acl.backend.model.enums.SecurityLevel;
-import com.prospero_acl.backend.model.dto.ReportContinueDTO;
-import com.prospero_acl.backend.model.dto.ReportCreateDTO;
-import com.prospero_acl.backend.model.dto.ReportResponseDTO;
 import com.prospero_acl.backend.model.dto.SecurityLevelDTO;
+import com.prospero_acl.backend.service.ConversationService;
 import com.prospero_acl.backend.service.DocumentService;
-import com.prospero_acl.backend.service.ReportService;
 import com.prospero_acl.backend.service.UserService;
 
 @RestController
@@ -43,7 +43,7 @@ public class MainController {
   @Autowired
   private DocumentService documentService;
   @Autowired
-  private ReportService reportService;
+  private ConversationService conversationService;
   @Autowired
   private UserService userService;
 
@@ -111,38 +111,36 @@ public class MainController {
   }
 
   @PostMapping("/conversations/create")
-  public ResponseEntity<ReportResponseDTO> createNewReport(
-      @RequestBody ReportCreateDTO reportCreateOptions,
+  public ResponseEntity<ConversationResponseDTO> createConversation(
+      @RequestBody ConversationCreateDTO req,
       Authentication authentication) {
 
-    ReportResponseDTO reportResponseDTO = reportService.createReport(authentication.getName(), reportCreateOptions);
-    return ResponseEntity.ok(reportResponseDTO);
+    return ResponseEntity.ok(conversationService.createConversation(authentication.getName(), req));
   }
 
-  @PostMapping("/conversations/{reportId}/continue")
-  public ResponseEntity<ReportResponseDTO> continueReport(
-      @PathVariable UUID reportId,
-      @RequestBody ReportContinueDTO req,
+  @PostMapping("/conversations/{conversationId}/continue")
+  public ResponseEntity<ConversationResponseDTO> continueConversation(
+      @PathVariable UUID conversationId,
+      @RequestBody ConversationContinueDTO req,
       Authentication authentication) {
 
-    ReportResponseDTO reportResponseDTO = reportService.continueReport(authentication.getName(), reportId, req);
-    return ResponseEntity.ok(reportResponseDTO);
+    return ResponseEntity.ok(
+        conversationService.continueConversation(authentication.getName(), conversationId, req));
   }
 
-  @GetMapping("/conversations/draft")
-  public ResponseEntity<ReportResponseDTO> getDraftReport(Authentication authentication) {
-    return reportService.getDraftReport(authentication.getName())
+  @GetMapping("/conversations/latest")
+  public ResponseEntity<ConversationResponseDTO> getLatestConversation(Authentication authentication) {
+    return conversationService.getLatestConversation(authentication.getName())
         .map(ResponseEntity::ok)
         .orElseGet(() -> ResponseEntity.noContent().build());
   }
 
-  @GetMapping("/conversations/{reportId}")
-  public ResponseEntity<ReportResponseDTO> getReport(
-      @PathVariable UUID reportId,
+  @GetMapping("/conversations/{conversationId}")
+  public ResponseEntity<ConversationResponseDTO> getConversation(
+      @PathVariable UUID conversationId,
       Authentication authentication) {
 
-    ReportResponseDTO reportResponseDTO = reportService.getReport(authentication.getName(), reportId);
-    return ResponseEntity.ok(reportResponseDTO);
+    return ResponseEntity.ok(conversationService.getConversation(authentication.getName(), conversationId));
   }
 
 }

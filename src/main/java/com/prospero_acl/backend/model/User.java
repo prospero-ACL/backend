@@ -70,5 +70,5 @@ public class User {
   @OneToMany(mappedBy = "owner", orphanRemoval = true)
   @ToString.Exclude
   @EqualsAndHashCode.Exclude
-  Set<Report> reports = new HashSet<>();
+  Set<Conversation> conversations = new HashSet<>();
 }
