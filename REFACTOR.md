@@ -137,6 +137,11 @@ Required mitigations:
 2. **Canary evaluation.** Choose facts that appear *only* in book 2 or book 3 and ask them at plebian
    tier. A correct answer proves parametric leakage, not retrieval success. This is the acceptance
    test for the whole thesis claim, and it belongs in the automated suite, not just in manual demos.
+   **Verify the fact really is exclusive** before drawing conclusions: during Stage 6 a plebian
+   correctly answered a question aimed at book 3, which looked like leakage until a query showed
+   book 1's bibliography cited the same work with its full author list. Confirm exclusivity with
+   `SELECT metadata->>'book', count(*) ... WHERE content ILIKE '%<fact>%' GROUP BY 1` first. In a
+   trilogy, later volumes recap earlier ones, so genuinely exclusive facts need choosing with care.
 3. Log retrieved chunk ids per turn, so any answer can be traced to the chunks that justified it.
 
 ## 5. Stages
@@ -224,12 +229,27 @@ against a corpus whose chunks carry no `book` key, the model answered *"I can't 
 provided context"* — RLS returned nothing and the model refused instead of drawing on its own
 knowledge, which is the behaviour section 4 depends on.
 
-### Stage 6 — Trilogy ingestion `TODO`
-`POST /api/v1/documents` takes exactly 3 files, their positions, and `trilogyName`. PATRICIAN-only at
-the controller (403) *and* by database grant. Raise multipart limits. Write the new metadata keys.
-**Decision for this stage's own plan:** a synchronous upload will almost certainly exceed request
-timeouts for three novels' worth of embedding calls — recommend an async job returning `202` plus a
-status endpoint, with per-book upload as the simpler fallback.
+### Stage 6 — Trilogy ingestion `DONE`
+`POST /api/v1/documents` takes `files` (exactly 3), a parallel `positions` list and `trilogyName`,
+and returns **202** with an `IngestionJobDTO`. `TrilogyIngestionWorker` does the work `@Async`;
+`GET /api/v1/documents/ingestions/{id}` reports `booksDone`/`chunksWritten`/`status`.
+`V4__ingestion_job.sql` persists jobs, so progress survives a page refresh and doubles as an audit
+trail of who ingested what. Multipart limits raised to 50MB per file / 200MB per request. Chunks now
+carry `trilogy`, `book`, `title`, `uploadedAt` and `owner` (monitoring only).
+
+Points worth remembering:
+- The worker runs off the request thread, so it sets `ClearanceContext` to PATRICIAN explicitly. The
+  elevation is bounded at both ends: the controller admits only patricians, and only
+  `postgres_patrician` holds INSERT on `vector_store`.
+- Re-uploading a trilogy **replaces** it (delete by `trilogy` first). Without that, a second run
+  silently doubles every chunk and quietly corrupts any comparison of what each tier retrieves.
+- Forbidding an upload uses a domain `InsufficientClearanceException` → 403. Spring Security's
+  `AccessDeniedException` was translated into a **401** by the app's custom authentication entry
+  point, which is misleading for an authenticated-but-unauthorised caller.
+
+**Verified** with three RAG papers as a stand-in trilogy: 403 for a non-patrician, 400 for the wrong
+book count, 202 then `PENDING → RUNNING → COMPLETED` (3 books, 93 chunks, ~15s), re-upload replacing
+rather than duplicating, and per-tier visibility of 21 / 51 / 93 chunks.
 
 ### Stage 7 — Report → Conversation `TODO`
 Rename entity/repo/service/DTOs (the HTTP paths are already `/api/v1/conversations/*`). Delete

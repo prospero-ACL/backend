@@ -20,6 +20,16 @@ public class GlobalExceptionHandler {
     return ResponseEntity.status(HttpStatus.CONFLICT).body(ex.getMessage());
   }
 
+  @ExceptionHandler(InsufficientClearanceException.class)
+  public ResponseEntity<String> handleInsufficientClearance(InsufficientClearanceException ex) {
+    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ex.getMessage());
+  }
+
+  @ExceptionHandler(IllegalArgumentException.class)
+  public ResponseEntity<String> handleBadRequest(IllegalArgumentException ex) {
+    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
+  }
+
   @ExceptionHandler(EmptyDocumentException.class)
   public ResponseEntity<String> handleEmptyDocument(EmptyDocumentException ex) {
     return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ex.getMessage());

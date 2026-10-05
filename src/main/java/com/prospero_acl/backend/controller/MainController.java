@@ -1,11 +1,14 @@
 package com.prospero_acl.backend.controller;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 import jakarta.persistence.EntityNotFoundException;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -15,10 +18,16 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.prospero_acl.backend.exception.InsufficientClearanceException;
+import com.prospero_acl.backend.exception.UnreadablePdfException;
 import com.prospero_acl.backend.model.User;
+import com.prospero_acl.backend.model.dto.BookUploadDTO;
+import com.prospero_acl.backend.model.dto.IngestionJobDTO;
+import com.prospero_acl.backend.model.enums.SecurityLevel;
 import com.prospero_acl.backend.model.dto.ReportContinueDTO;
 import com.prospero_acl.backend.model.dto.ReportCreateDTO;
 import com.prospero_acl.backend.model.dto.ReportResponseDTO;
@@ -49,11 +58,36 @@ public class MainController {
   }
 
   @PostMapping(value = "/documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-  public void storeDocument(
-      @RequestParam("file") MultipartFile file,
+  @ResponseStatus(HttpStatus.ACCEPTED)
+  public IngestionJobDTO storeTrilogy(
+      @RequestParam("files") List<MultipartFile> files,
+      @RequestParam("positions") List<Integer> positions,
+      @RequestParam("trilogyName") String trilogyName,
       Authentication authentication) {
+
     User user = resolveUser(authentication);
-    documentService.saveDocument(file, user.getId().toString());
+    if (user.getSecurityLevel() != SecurityLevel.PATRICIAN) {
+      throw new InsufficientClearanceException("Only patricians may upload a trilogy");
+    }
+    if (files.size() != positions.size()) {
+      throw new IllegalArgumentException("Each file needs exactly one book position");
+    }
+
+    List<BookUploadDTO> books = new ArrayList<>();
+    for (int i = 0; i < files.size(); i++) {
+      MultipartFile file = files.get(i);
+      try {
+        books.add(new BookUploadDTO(positions.get(i), file.getOriginalFilename(), file.getBytes()));
+      } catch (IOException e) {
+        throw new UnreadablePdfException("Could not read \"" + file.getOriginalFilename() + "\"", e);
+      }
+    }
+    return documentService.startIngestion(user, trilogyName, books);
+  }
+
+  @GetMapping("/documents/ingestions/{jobId}")
+  public IngestionJobDTO getIngestion(@PathVariable UUID jobId, Authentication authentication) {
+    return documentService.getIngestion(jobId, resolveUser(authentication).getId());
   }
 
   private User resolveUser(Authentication authentication) {
