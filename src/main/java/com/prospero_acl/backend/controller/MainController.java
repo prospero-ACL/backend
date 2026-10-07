@@ -102,14 +102,6 @@ public class MainController {
     return ResponseEntity.ok(securityLevelDTO);
   }
 
-  @PostMapping("/me/security-level")
-  public ResponseEntity<Void> updateSecurityLevel(
-      @RequestBody SecurityLevelDTO req,
-      Authentication authentication) {
-    userService.updateSecurityLevel(authentication.getName(), req.securityLevel());
-    return ResponseEntity.ok().build();
-  }
-
   @PostMapping("/conversations/create")
   public ResponseEntity<ConversationResponseDTO> createConversation(
       @RequestBody ConversationCreateDTO req,

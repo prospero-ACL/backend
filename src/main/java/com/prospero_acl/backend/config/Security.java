@@ -25,6 +25,7 @@ import com.prospero_acl.backend.service.JwtService;
 import com.prospero_acl.backend.service.UserService;
 
 import jakarta.servlet.http.Cookie;
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
@@ -55,6 +56,10 @@ public class Security {
         .authorizeHttpRequests(req -> req
             // exept register that is un protected
             .requestMatchers("/oauth2/**").permitAll()
+            // Spring reports 404/405/etc. by forwarding to /error. JwtAuthFilter skips that
+            // forward, so without this every such status reached the client as a 401. Only the
+            // internal ERROR dispatch is opened; a direct request to /error is still authenticated.
+            .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
             .anyRequest().authenticated())
         // .anyRequest().permitAll())
 

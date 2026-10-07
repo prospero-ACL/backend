@@ -6,7 +6,6 @@ import jakarta.persistence.EntityNotFoundException;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.prospero_acl.backend.model.User;
 import com.prospero_acl.backend.model.dto.ExtractedUserDTO;
@@ -39,18 +38,13 @@ public class UserService {
     return user;
   }
 
+  // Read-only on purpose: clearance selects the Postgres role a user's corpus queries run as, so
+  // letting users set it would be a privilege-escalation endpoint. It is assigned out of band
+  // (see infra/set-clearance.sh).
   public SecurityLevel getSecurityLevel(String providerId) {
     return userRepo.findByProviderId(providerId)
         .orElseThrow(() -> new EntityNotFoundException("User not found"))
         .getSecurityLevel();
-  }
-
-  @Transactional
-  public void updateSecurityLevel(String providerId, SecurityLevel securityLevel) {
-    int updated = userRepo.updateSecurityLevelByProviderId(providerId, securityLevel);
-    if (updated == 0) {
-      throw new EntityNotFoundException("User not found");
-    }
   }
 
 }

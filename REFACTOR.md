@@ -280,20 +280,57 @@ prompt injected by SQL returns `reply: null` instead of a 500 and the next turn 
 another user gets 404 on someone else's conversation. The history window cut-off itself was not
 exercised (it needs more than 6 turns).
 
-### Stage 8 — Security level lockdown `TODO`
+### Stage 8 — Security level lockdown `DONE` (backend; the profile slider goes in Stage 9)
 Users must not change their own clearance: with DB roles it decides which Postgres role their queries
-run as, making self-service assignment a privilege-escalation endpoint. Remove
-`POST /api/v1/me/security-level`, the service and repo methods, and the profile slider. Keep
-`GET /me/security-level` — the frontend needs it to gate the upload UI. Document the assignment path
-(direct SQL or a seed migration).
+run as, making self-service assignment a privilege-escalation endpoint. `POST /api/v1/me/security-level`,
+`UserService.updateSecurityLevel` and `UserRepo.updateSecurityLevelByProviderId` are removed.
+`GET /me/security-level` stays — the frontend needs it to gate the upload UI.
 
-### Stage 9 — Frontend `TODO`
-Rename report→conversation (`shared/dto/chat.ts`, `config/api.ts`, `config/reducers/report.reducer.ts`,
-`modules/chat/**`). Delete the document-picker modal trio, the `chunks`/`scope` request fields, the
-`COMPLETED` gating, the 409 handler and the "3-question limit" copy. Rebuild the upload modal: trilogy
-title, exactly 3 files, explicit position per file; no scope slider. Gate the upload control on
-PATRICIAN — **no role-conditional rendering pattern exists today**, so this is new. Remove the profile
-security-level slider.
+**Assignment path:** `infra/set-clearance.sh`, run by whoever operates the database.
+No arguments lists users; `set-clearance.sh <providerId|email> <PLEBIAN|EQUES|PATRICIAN>` assigns.
+It validates the level, passes both arguments to psql as quoted variables (never spliced into SQL),
+and exits non-zero for an unknown user. No restart is needed — `ClearanceFilter` reads clearance per
+request, so the change applies to the user's very next call. New users still start as `PLEBIAN`
+(entity default), so the default fails closed.
+
+**Verified:** the old POST no longer changes anything; the script rejects an unknown level, an
+unknown user and a quote-injection attempt (no rows changed); EQUES → PLEBIAN via the script is
+reflected by `GET /me/security-level` on the next request, and restoring it works the same way.
+
+*Fixed alongside, pre-existing and app-wide:* the removed POST first answered **401**, not 405.
+Spring reports 405/404 (any `sendError` status) by forwarding to `/error`; `JwtAuthFilter` is a
+`OncePerRequestFilter` and skips that ERROR dispatch, so the forward ran unauthenticated and the
+custom entry point turned it into 401. `Security` now permits `DispatcherType.ERROR` — only the
+internal forward, not the `/error` path, so a direct `GET /error` is still 401. Verified: authed
+callers get real 404/405s; anonymous callers still get 401 for everything, so route existence is not
+leaked.
+
+### Stage 9 — Frontend `DONE`
+Report → conversation across `shared/dto/chat.ts`, `config/api.ts`, the reducer (now
+`conversation.reducer.ts`, persisted under the `conversation` key) and `modules/chat/**`. The
+document-picker trio, `chunks`/`scope`, the `COMPLETED` gating, the 409 handler and the 3-question
+copy are gone. `reply` is nullable to match Stage 7, rendered as "No reply was recorded".
+Since conversations never end, chat gains a **New conversation** button; without it the latest
+conversation would be re-adopted forever (`isStartingFresh` suppresses that adoption).
+
+Documents page lists trilogy titles. The upload modal takes a trilogy title and three fixed
+`Book 1/2/3` file slots, so the position of each file is explicit and "exactly three" holds by
+construction. After the 202 the page polls `GET /documents/ingestions/{id}` every 2s, shows progress,
+stops when the job ends and refreshes the title list on completion. Backend error bodies (400/403/422)
+are shown verbatim in the modal.
+
+The role-conditional rendering pattern is `shared/hooks/use-clearance.ts` (`useClearance()` →
+`securityLevel`, `isPatrician`), used by the documents page to hide upload and by the read-only
+profile page. It is a UX courtesy only — the controller and Postgres still enforce.
+
+**Verified:** `npm test` (typecheck, format, oxlint, stylelint, vitest, build) passes. Every call the
+UI makes was replayed through the Vite `/api` proxy: latest 204 → create → continue → get → latest;
+upload as EQUES → 403 with readable body; as PATRICIAN → 202 then polling `RUNNING 1/3 → 2/3 →
+COMPLETED 3/3, 93 chunks` with the corpus unchanged (21/30/42). **Not verified:** the rendered UI in a
+browser — it needs a real OAuth login.
+
+*Known gap:* the ingestion job id lives in component state, so leaving the documents page stops the
+progress display (the job itself carries on server-side and the title appears once done).
 
 ### Stage 10 — Docs and verification `TODO`
 Rewrite the ACL sections of `README.md` and `CLAUDE.md`; both still describe the owner-based matrix,
