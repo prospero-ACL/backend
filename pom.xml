@@ -29,6 +29,9 @@
 	<properties>
 		<java.version>25</java.version>
 		<spring-ai.version>2.0.0-M5</spring-ai.version>
+		<!-- Tests tagged "llm" call the real OpenAI API (cost, non-deterministic), so a plain
+		     `./mvnw test` skips them. Run them with: ./mvnw test -Dgroups=llm -DexcludedGroups= -->
+		<excludedGroups>llm</excludedGroups>
 	</properties>
   <dependencies>
     <dependency>
@@ -119,6 +122,17 @@
       <artifactId>flyway-database-postgresql</artifactId>
     </dependency>
 
+    <!-- The ACL lives in Postgres roles + RLS, so it can only be tested against a real Postgres. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-testcontainers</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>testcontainers-postgresql</artifactId>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>org.apache.pdfbox</groupId>
       <artifactId>pdfbox</artifactId>

@@ -332,13 +332,50 @@ browser — it needs a real OAuth login.
 *Known gap:* the ingestion job id lives in component state, so leaving the documents page stops the
 progress display (the job itself carries on server-side and the title appears once done).
 
-### Stage 10 — Docs and verification `TODO`
-Rewrite the ACL sections of `README.md` and `CLAUDE.md`; both still describe the owner-based matrix,
-and `CLAUDE.md` cites a `resolveAllowedTiers` method that no longer exists.
+### Stage 10 — Docs and verification `DONE`
+`backend/CLAUDE.md` is rewritten around the current system: Flyway ownership (including the
+baselined-vs-fresh constraint-name trap), the tier/role/book table and RLS, clearance routing and
+its pitfalls, conversations, trilogy ingestion, clearance assignment, and the grounding caveat.
+The owner-based matrix, `resolveAllowedTiers`, `DocumentScope`, the classifier and the
+3-question limit are gone. `backend/README.md` explains the same model for a human reader.
+Stale lines were also fixed in `frontend/CLAUDE.md`/`README.md` (report → conversation, persisted
+slices, the `useClearance` pattern) and `infra/CLAUDE.md` (`dev` no longer wipes volumes — `clean`
+does; the `-p prospero-acl` trap; the two scripts; how `env_file` and `environment:` interact).
 
-## 6. Verification
+Verification: every identifier and path the new docs cite was checked to exist. `verify-acl.sh`
+passes 11/11 after Stages 7–9. Running it with Postgres stopped exposed a false pass — `denied()`
+read any error as "allowed", so *patrician can insert* passed against no database — so the script
+now checks reachability first and exits 2.
+
+*Followed up:* the dead `EmptyDocumentException` and its 422 mapping were removed
+(`UnreadablePdfException` → 422 stays — `MainController` still throws it), and section 6 is
+implemented — see there.
+
+## 6. Verification `DONE`
 
 The thesis claim is "the database refuses out-of-clearance rows", so it must be tested at that level.
+All five items below are implemented; how to run them is in `CLAUDE.md` → Commands / Tests.
+
+| Item | Where | Runs |
+|---|---|---|
+| SQL, per role | `infra/verify-acl.sh` (11 checks) | against the live dev DB |
+| Integration | `acl/CorpusReadIsolationTest` (7) | `./mvnw test`, offline, Testcontainers |
+| Negative | `acl/CorpusWritePrivilegeTest` (7) | `./mvnw test`, offline, Testcontainers |
+| Canary + end-to-end | `acl/TrilogyEndToEndTest` (4) | `-Dgroups=llm`, real OpenAI, ~1 min |
+
+The offline suites were **mutation-checked**: loosening the plebian policy to books 1–2 failed 2
+tests; mapping PLEBIAN to the patrician pool failed 4. The end-to-end suite passed twice in a row.
+
+Design notes:
+- The trilogy in the end-to-end test is a short synthetic retelling written for the test, so every
+  fact's location is known and exclusivity is asserted in setup (the Stage 6 trap below).
+- Two canary kinds: an **invented** name (no model can know it — a leak can only be retrieval) and a
+  **famous** fact, "Gondor" (every model knows it — a leak is parametric memory).
+- Observed: at plebian tier the model refuses, but ends with *"If you'd like, I can answer from my
+  general knowledge."* A follow-up "yes, use your general knowledge" is now a canary too; it currently
+  passes because `QuestionAnswerAdvisor`'s "no prior knowledge" template is re-applied every turn —
+  but the model keeps offering what it then refuses. The stricter grounding prompt of §4 item 1
+  should remove the offer; these tests are its acceptance criteria.
 
 - **SQL, per role** — implemented as `infra/verify-acl.sh`. Catches the real failure modes: a policy
   targeting the wrong role, RLS not enabled, the app role accidentally reused, superuser bypass.
