@@ -1,6 +1,7 @@
 package com.prospero_acl.backend.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -24,6 +25,9 @@ public class AuthController {
 
   @Autowired
   private UserService userService;
+
+  @Value("${app.cookie-secure}")
+  private boolean cookieSecure;
 
   @GetMapping("/me")
   public ResponseEntity<ResponseUserDTO> getUserMe(Authentication authentication) {
@@ -51,7 +55,7 @@ public class AuthController {
 
     Cookie cookie = new Cookie("access_token", "");
     cookie.setHttpOnly(true);
-    cookie.setSecure(false);
+    cookie.setSecure(cookieSecure);
     cookie.setPath("/");
     cookie.setMaxAge(0);
 

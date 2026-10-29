@@ -1,10 +1,10 @@
 package com.prospero_acl.backend;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-class BackendApplicationTests {
+import com.prospero_acl.backend.support.PostgresIntegrationTest;
+
+class BackendApplicationTests extends PostgresIntegrationTest {
 
 	@Test
 	void contextLoads() {

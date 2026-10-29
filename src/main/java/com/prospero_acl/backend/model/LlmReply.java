@@ -33,8 +33,8 @@ public class LlmReply {
   private Integer position;
 
   @ManyToOne(fetch = FetchType.EAGER)
-  @JoinColumn(name = "report_id", nullable = false)
-  private Report report;
+  @JoinColumn(name = "conversation_id", nullable = false)
+  private Conversation conversation;
 
   @Column(nullable = false, columnDefinition = "TEXT")
   private String text;

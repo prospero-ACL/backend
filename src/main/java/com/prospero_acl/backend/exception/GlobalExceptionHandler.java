@@ -15,23 +15,18 @@ public class GlobalExceptionHandler {
     return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
   }
 
-  @ExceptionHandler(ReportCompletedException.class)
-  public ResponseEntity<String> handleReportCompleted(ReportCompletedException ex) {
-    return ResponseEntity.status(HttpStatus.CONFLICT).body(ex.getMessage());
+  @ExceptionHandler(InsufficientClearanceException.class)
+  public ResponseEntity<String> handleInsufficientClearance(InsufficientClearanceException ex) {
+    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ex.getMessage());
   }
 
-  @ExceptionHandler(EmptyDocumentException.class)
-  public ResponseEntity<String> handleEmptyDocument(EmptyDocumentException ex) {
-    return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ex.getMessage());
+  @ExceptionHandler(IllegalArgumentException.class)
+  public ResponseEntity<String> handleBadRequest(IllegalArgumentException ex) {
+    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
   }
 
   @ExceptionHandler(UnreadablePdfException.class)
   public ResponseEntity<String> handleUnreadablePdf(UnreadablePdfException ex) {
-    return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ex.getMessage());
-  }
-
-  @ExceptionHandler(IrrelevantQueryException.class)
-  public ResponseEntity<String> handleIrrelevantQuery(IrrelevantQueryException ex) {
     return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ex.getMessage());
   }
 }
