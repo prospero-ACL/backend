@@ -36,6 +36,9 @@ public class Security {
   @Value("${app.frontend-url}")
   private String frontendUrl;
 
+  @Value("${app.cookie-secure}")
+  private boolean cookieSecure;
+
   @Autowired
   private JwtAuthFilter jwtAuthFilter;
 
@@ -94,7 +97,7 @@ public class Security {
       String token = jwtService.generateToken(exUser);
       Cookie cookie = new Cookie("access_token", token);
       cookie.setHttpOnly(true);
-      cookie.setSecure(false);
+      cookie.setSecure(cookieSecure);
       cookie.setPath("/");
       cookie.setMaxAge(60 * 60);
 
